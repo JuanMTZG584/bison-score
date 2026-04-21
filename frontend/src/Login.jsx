@@ -6,24 +6,24 @@ import Navbar from "./Navbar";
 import { labelSx } from "./theme";
 
 export default function Login({ onNavigate, onLogin, user, onLogout }) {
-  const [username, setUsername] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
 
   const handleSubmit = async () => {
     setError("");
-    if (!username || !password) { setError("Completa todos los campos."); return; }
+    if (!email || !password) { setError("Completa todos los campos."); return; }
     setLoading(true);
     try {
       const res  = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Error al iniciar sesión");
-      onLogin({ name: username });
+      onLogin({ name: data.name || email });
       onNavigate("home");
     } catch (e) {
       setError(e.message);
@@ -52,14 +52,23 @@ export default function Login({ onNavigate, onLogin, user, onLogout }) {
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          <Typography sx={labelSx}>USERNAME</Typography>
-          <TextField value={username} onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username" sx={{ mb: 0.5 }} />
+          <Typography sx={labelSx}>CORREO</Typography>
+          <TextField
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            sx={{ mb: 0.5 }}
+          />
 
           <Typography sx={{ ...labelSx, mt: 1.5 }}>CONTRASEÑA</Typography>
-          <TextField type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          <TextField
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          />
 
           <Box sx={{ display: "flex", gap: 2, mt: 3.5 }}>
             <Button fullWidth variant="contained" color="secondary"

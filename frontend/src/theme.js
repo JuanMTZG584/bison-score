@@ -52,7 +52,7 @@ export const labelSx = {
 export const GAMES = [
   {
     id: 1, title: "Uncharted 4", platform: "Playstation 5", genre: "Acción", score: 90,
-    image: "https://upload.wikimedia.org/wikipedia/en/e/ef/Uncharted_4_box_art.jpg",
+    image: "https://pics.filmaffinity.com/uncharted_4_a_thief_s_end-134903281-mmed.jpg",
     description: "Una aventura de acción épica que sigue a Nathan Drake en su última misión.",
     reviews: [
       { user: "PLAYER843", score: 9, text: "Una obra maestra de la narrativa en videojuegos. Gráficos impresionantes y jugabilidad fluida." },
@@ -61,7 +61,7 @@ export const GAMES = [
   },
   {
     id: 2, title: "Microsoft Flight Simulator", platform: "Xbox", genre: "Simulador", score: 80,
-    image: "https://upload.wikimedia.org/wikipedia/en/9/9b/Microsoft_Flight_Simulator_2020_cover.jpg",
+    image: "https://m.media-amazon.com/images/M/MV5BMzlhNTVhZjYtZWFmYy00YjhiLWFiOWYtMDM1NGZkNDRlY2Q3XkEyXkFqcGc@._V1_.jpg",
     description: "El simulador de vuelo más realista del mercado con gráficos fotorrealistas.",
     reviews: [
       { user: "PILOT99", score: 8, text: "Increíblemente realista. La mejor experiencia de simulación disponible." },
@@ -69,7 +69,7 @@ export const GAMES = [
   },
   {
     id: 3, title: "Mario Kart 8", platform: "Nintendo Switch", genre: "Carreras", score: 85,
-    image: "https://upload.wikimedia.org/wikipedia/en/6/6e/Mario_Kart_8_Deluxe_box_art.jpg",
+    image: "https://m.media-amazon.com/images/M/MV5BOWVlNTVjNmQtM2ExNS00YjM5LTg1NjMtYmU3NGI4MmNkMWJiXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
     description: "Mario Kart 8 Deluxe es un videojuego de carreras desarrollado y publicado por Nintendo para la consola Nintendo Switch.",
     reviews: [
       { user: "PLAYER843", score: 7, text: "Mariokart 8 deluxe is a great game with stunning courses. It has endless replayability with the items, old and new, and different paths on tracks, making it a unique experience every time. The dlc adding an extra 48 tracks, making the total 96 tracks, this is a mariokart record amount of tracks..." },
