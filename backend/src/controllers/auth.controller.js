@@ -2,6 +2,7 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import logger from "../config/logger.js";
+import { env } from "../config/env.js";
 
 export const signup = async (req, res) => {
     logger.info("Inicio de proceso de registro");
@@ -13,13 +14,20 @@ export const signup = async (req, res) => {
         return res.status(400).json({ message: "Debes de completar todos los campos." });
     }
 
+    const normalizedEmail = email?.toLowerCase().trim();
+
+    if (!normalizedEmail) {
+        logger.warn("Email inválido");
+        return res.status(400).json({ message: "Formato de correo no válido." });
+    }
+
     if (password.length < 6) {
         logger.warn("Contraseña demasiado corta");
         return res.status(400).json({ message: "La contraseña debe contener al menos 6 caracteres." });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
         logger.warn("Formato de correo inválido");
         return res.status(400).json({ message: "Formato de correo no válido." });
     }
@@ -39,7 +47,7 @@ export const signup = async (req, res) => {
     }
 
     if (age < 13) {
-        logger.warn(`Usuario menor de edad: ${email}`);
+        logger.warn(`Usuario menor de edad: ${normalizedEmail}`);
         return res.status(403).json({ message: "Debes tener al menos 13 años." });
     }
 
@@ -48,15 +56,15 @@ export const signup = async (req, res) => {
 
         const savedUser = await User.create({
             name,
-            email,
+            email: normalizedEmail,
             password: hashedPassword,
             image_url,
-            birth_date,
+            birth_date: birthDateObj
         });
 
         generateToken(savedUser._id, res);
 
-        logger.info(`Usuario registrado correctamente: ${email}`);
+        logger.info(`Usuario registrado correctamente: ${normalizedEmail}`);
 
         return res.status(201).json({
             _id: savedUser._id,
@@ -67,7 +75,7 @@ export const signup = async (req, res) => {
 
     } catch (error) {
         if (error.code === 11000) {
-            logger.warn(`Email duplicado (DB): ${email}`);
+            logger.warn(`Email duplicado (DB): ${normalizedEmail}`);
             return res.status(400).json({ message: "Este correo ya fue registrado." });
         }
 
@@ -89,18 +97,25 @@ export const login = async (req, res) => {
         return res.status(400).json({ message: "Todos los campos se deben rellenar" });
     }
 
+    const normalizedEmail = email?.toLowerCase().trim();
+
+    if (!normalizedEmail) {
+        logger.warn("Login fallido: email inválido");
+        return res.status(400).json({ message: "Credenciales inválidas" });
+    }
+
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail});
 
         if (!user) {
-            logger.warn(`Login fallido: usuario no encontrado (${email})`);
+            logger.warn(`Login fallido: usuario no encontrado (${normalizedEmail})`);
             return res.status(400).json({ message: "Credenciales inválidas" });
         }
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
         if (!isPasswordCorrect) {
-            logger.warn(`Login fallido: contraseña incorrecta (${email})`);
+            logger.warn(`Login fallido: contraseña incorrecta (${normalizedEmail})`);
             return res.status(400).json({ message: "Credenciales inválidas" });
         }
 
@@ -108,7 +123,7 @@ export const login = async (req, res) => {
 
         logger.info(`Login exitoso: ${user.email}`);
 
-        res.status(200).json({
+        return res.status(200).json({
             _id: user._id,
             name: user.name,
             email: user.email,
@@ -122,8 +137,22 @@ export const login = async (req, res) => {
             message: error.message
         });
 
-        res.status(500).json({ message: "Error interno del servidor" });
+        return res.status(500).json({ message: "Error interno del servidor" });
     } finally {
         logger.info("Fin de proceso de login");
     }
+};
+
+export const logout = (_, res) => {
+    logger.info("Inicio de logout");
+
+    res.clearCookie("jwt", {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: env.NODE_ENV !== "development"
+    });
+
+    logger.info("Logout exitoso");
+
+    res.status(200).json({ message: "Cierre de sesión exitoso" });
 };
