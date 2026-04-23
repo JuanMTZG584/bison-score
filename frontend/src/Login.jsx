@@ -3,7 +3,7 @@ import {
   Alert, Box, Button, CircularProgress, Paper, TextField, Typography,
 } from "@mui/material";
 import Navbar from "./Navbar";
-import { labelSx } from "./theme";
+import { labelSx, bgSx } from "./theme";
 
 export default function Login({ onNavigate, onLogin, user, onLogout }) {
   const [email,    setEmail]    = useState("");
@@ -33,63 +33,69 @@ export default function Login({ onNavigate, onLogin, user, onLogout }) {
   };
 
   return (
-    <>
-      <Navbar onNavigate={onNavigate} user={user} onLogout={onLogout} />
-      <Box sx={{ minHeight: "calc(100vh - 64px)", display: "flex",
-        alignItems: "center", justifyContent: "center", p: 3 }}>
-        <Paper elevation={2} sx={{
-          bgcolor: "background.paper", borderRadius: 3,
-          border: "1.5px solid #b0b8c1", p: "36px 40px 30px",
-          width: "100%", maxWidth: 420,
-        }}>
-          <Typography sx={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontWeight: 800, fontSize: "1.5rem", letterSpacing: 3,
-            textAlign: "center", color: "#1a2233", mb: 3, textTransform: "uppercase",
+    <Box sx={{ minHeight: "100vh", position: "relative" }}>
+      {/* Fondo difuminado */}
+      <Box sx={bgSx} />
+
+      {/* Contenido */}
+      <Box sx={{ position: "relative", zIndex: 1 }}>
+        <Navbar onNavigate={onNavigate} user={user} onLogout={onLogout} />
+        <Box sx={{ minHeight: "calc(100vh - 64px)", display: "flex",
+          alignItems: "center", justifyContent: "center", p: 3 }}>
+          <Paper elevation={2} sx={{
+            bgcolor: "background.paper", borderRadius: 3,
+            border: "1.5px solid #b0b8c1", p: "36px 40px 30px",
+            width: "100%", maxWidth: 420,
           }}>
-            Inicio de Sesión
-          </Typography>
+            <Typography sx={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 800, fontSize: "1.5rem", letterSpacing: 3,
+              textAlign: "center", color: "#1a2233", mb: 3, textTransform: "uppercase",
+            }}>
+              Inicio de Sesión
+            </Typography>
 
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          <Typography sx={labelSx}>CORREO</Typography>
-          <TextField
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            sx={{ mb: 0.5 }}
-          />
+            <Typography sx={labelSx}>CORREO</Typography>
+            <TextField
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              sx={{ mb: 0.5 }}
+            />
 
-          <Typography sx={{ ...labelSx, mt: 1.5 }}>CONTRASEÑA</Typography>
-          <TextField
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          />
+            <Typography sx={{ ...labelSx, mt: 1.5 }}>CONTRASEÑA</Typography>
+            <TextField
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            />
 
-          <Box sx={{ display: "flex", gap: 2, mt: 3.5 }}>
-            <Button fullWidth variant="contained" color="secondary"
-              disabled={loading} onClick={handleSubmit} sx={{ py: 1.2, color: "#fff" }}>
-              {loading ? <CircularProgress size={20} color="inherit" /> : "INICIAR SESIÓN"}
-            </Button>
-            <Button fullWidth variant="contained" onClick={() => onNavigate("home")}
-              sx={{ py: 1.2, bgcolor: "#e53935", "&:hover": { bgcolor: "#c62828" } }}>
-              CANCELAR
-            </Button>
-          </Box>
-
-          <Typography align="center" sx={{ mt: 2.5, fontSize: "0.88rem", color: "#444" }}>
-            ¿No tienes cuenta?{" "}
-            <Box component="span" onClick={() => onNavigate("register")}
-              sx={{ textDecoration: "underline", cursor: "pointer", fontWeight: 600, color: "#1a2233" }}>
-              Regístrate
+            <Box sx={{ display: "flex", gap: 2, mt: 3.5 }}>
+              <Button fullWidth variant="contained" color="secondary"
+                disabled={loading} onClick={handleSubmit} sx={{ py: 1.2, color: "#fff" }}>
+                {loading ? <CircularProgress size={20} color="inherit" /> : "INICIAR SESIÓN"}
+              </Button>
+              <Button fullWidth variant="contained" onClick={() => onNavigate("home")}
+                sx={{ py: 1.2, bgcolor: "#e53935", "&:hover": { bgcolor: "#c62828" } }}>
+                CANCELAR
+              </Button>
             </Box>
-          </Typography>
-        </Paper>
+
+            <Typography align="center" sx={{ mt: 2.5, fontSize: "0.88rem", color: "#444" }}>
+              ¿No tienes cuenta?{" "}
+              <Box component="span" onClick={() => onNavigate("register")}
+                sx={{ textDecoration: "underline", cursor: "pointer", fontWeight: 600, color: "#1a2233" }}>
+                Regístrate
+              </Box>
+            </Typography>
+          </Paper>
+        </Box>
       </Box>
-    </>
+    </Box>
   );
 }
