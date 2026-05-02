@@ -176,3 +176,14 @@ export const logout = (_, res) => {
 
     res.status(200).json({ message: "Cierre de sesión exitoso" });
 };
+
+export const getMe = (req, res) => {
+    return res.status(200).json({
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        image_url: req.user.image_url,
+        birth_date: req.user.birth_date,
+        role: req.user.role
+    });
+};

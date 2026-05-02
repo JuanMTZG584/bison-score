@@ -1,5 +1,5 @@
 import express from "express";
-import { signup, login, logout } from "../controllers/auth.controller.js";
+import { signup, login, logout,getMe } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/upload.middleware.js";
 
@@ -11,8 +11,10 @@ router.post("/login", login);
 
 router.post("/logout", logout);
 
-router.get("/check", protectRoute, (req, res) => {
-  res.status(200).json(req.user);
-});
+router.get("/me", protectRoute, getMe);
+
+// router.get("/check", protectRoute, (req, res) => {
+//   res.status(200).json(req.user);
+// });
 
 export default router;
