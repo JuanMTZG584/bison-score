@@ -3,11 +3,12 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import logger from "../config/logger.js";
 import { env } from "../config/env.js";
+import { uploadImage } from "../lib/cloudinary.helper.js";
 
 export const signup = async (req, res) => {
     logger.info("Inicio de proceso de registro");
 
-    const { name, email, password, image_url, birth_date } = req.body;
+    const { name, email, password, birth_date } = req.body;
 
     if (!name || !email || !password || !birth_date) {
         logger.warn("Campos incompletos en registro");
@@ -52,6 +53,13 @@ export const signup = async (req, res) => {
     }
 
     try {
+        let image_url;
+
+        if (req.file) {
+            const result = await uploadImage(req.file.buffer);
+            image_url = result.secure_url;
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const savedUser = await User.create({
@@ -70,6 +78,8 @@ export const signup = async (req, res) => {
             _id: savedUser._id,
             name: savedUser.name,
             email: savedUser.email,
+            image_url: savedUser.image_url,
+            birth_date: savedUser.birth_date,
             role: savedUser.role
         });
 
@@ -105,7 +115,7 @@ export const login = async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ email: normalizedEmail});
+        const user = await User.findOne({ email: normalizedEmail });
 
         if (!user) {
             logger.warn(`Login fallido: usuario no encontrado (${normalizedEmail})`);
