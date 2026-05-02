@@ -62,13 +62,18 @@ export const signup = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const savedUser = await User.create({
+        const userData = {
             name,
             email: normalizedEmail,
             password: hashedPassword,
-            image_url,
             birth_date: birthDateObj
-        });
+        };
+
+        if (image_url) {
+            userData.image_url = image_url;
+        }
+
+        const savedUser = await User.create(userData);
 
         generateToken(savedUser._id, res);
 
@@ -115,7 +120,7 @@ export const login = async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ email: normalizedEmail });
+        const user = await User.findOne({ email: normalizedEmail }).select("+password");
 
         if (!user) {
             logger.warn(`Login fallido: usuario no encontrado (${normalizedEmail})`);
@@ -127,6 +132,11 @@ export const login = async (req, res) => {
         if (!isPasswordCorrect) {
             logger.warn(`Login fallido: contraseña incorrecta (${normalizedEmail})`);
             return res.status(400).json({ message: "Credenciales inválidas" });
+        }
+
+        if (!user.is_active) {
+            logger.warn(`Login bloqueado: usuario inactivo (${normalizedEmail})`);
+            return res.status(403).json({ message: "Credenciales inválidas" });
         }
 
         generateToken(user._id, res);
