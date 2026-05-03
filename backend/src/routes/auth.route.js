@@ -1,5 +1,5 @@
 import express from "express";
-import { signup, login, logout, getMe, updateProfile, toggleUserStatus } from "../controllers/auth.controller.js";
+import { signup, login, logout, getMe, updateProfile, toggleUserStatus, getUsers } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/upload.middleware.js";
 import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
@@ -15,6 +15,8 @@ router.post("/logout", logout);
 router.get("/me", protectRoute, getMe);
 
 router.put("/profile", protectRoute, upload.single("image"), updateProfile);
+
+router.get("/users", protectRoute, requireAdmin, getUsers);
 
 router.patch("/users/:id/toggle-status", protectRoute, requireAdmin, toggleUserStatus);
 

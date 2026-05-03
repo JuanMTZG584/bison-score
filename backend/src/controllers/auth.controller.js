@@ -350,3 +350,64 @@ export const toggleUserStatus = async (req, res) => {
         logger.info("Fin de toggle de estado");
     }
 };
+
+export const getUsers = async (req, res) => {
+    logger.info("Inicio de listado de usuarios");
+
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const is_active = req.query.is_active;
+        const search = req.query.search;
+
+        const skip = (page - 1) * limit;
+
+        const filter = {
+            role: "USER"
+        };
+
+        if (is_active !== undefined) {
+            filter.is_active = is_active === "true";
+        }
+
+        if (search && search.trim().length > 0) {
+            const regex = new RegExp(search.trim(), "i");
+
+            filter.$or = [
+                { name: regex },
+                { email: regex }
+            ];
+        }
+
+        const [users, total] = await Promise.all([
+            User.find(filter)
+                .select("-password")
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            User.countDocuments(filter)
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            success: true,
+            page,
+            totalPages,
+            totalUsers: total,
+            users
+        });
+
+    } catch (error) {
+        logger.error("Error al listar usuarios", {
+            message: error.message
+        });
+
+        return res.status(500).json({
+            message: "Error interno del servidor"
+        });
+    } finally {
+        logger.info("Fin de listado de usuarios");
+    }
+};
