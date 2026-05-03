@@ -403,3 +403,95 @@ export const getUsers = async (req, res) => {
         logger.info("Fin de listado de usuarios");
     }
 };
+
+export const updateUserByAdmin = async (req, res) => {
+    logger.info("Admin actualizando usuario");
+
+    const userId = req.params.id;
+    const { name, birth_date, password, role } = req.body;
+
+    try {
+        const updateData = {};
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            logger.warn(`Usuario no encontrado: ${userId}`);
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        if (req.user._id.toString() === userId) {
+            logger.warn(`Intento de auto-modificación del admin: ${userId}`);
+            return res.status(400).json({
+                message: "No puedes modificar tu propio usuario desde esta página"
+            });
+        }
+
+        if (typeof name === "string" && name.trim().length >= 2) {
+            updateData.name = name.trim();
+            logger.info("Nombre actualizado");
+        }
+
+        if (birth_date) {
+            const birthDateObj = new Date(birth_date);
+
+            if (isNaN(birthDateObj.getTime())) return;
+
+            const today = new Date();
+            let age = today.getFullYear() - birthDateObj.getFullYear();
+
+            const monthDiff = today.getMonth() - birthDateObj.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+                age--;
+            }
+
+            if (age < 13) {
+                logger.warn("Fecha de nacimiento inválida");
+                return res.status(400).json({ message: "Edad mínima 13 años" });
+            }
+
+            updateData.birth_date = birthDateObj;
+            logger.info("Fecha de nacimiento actualizada");
+        }
+
+        if (typeof password === "string" && password.length >= 6) {
+            updateData.password = await bcrypt.hash(password, 10);
+            logger.info("Contraseña actualizada");
+        }
+
+        if (role === "USER" || role === "ADMIN") {
+            updateData.role = role;
+            logger.info(`Rol actualizado: ${role}`);
+        }
+
+
+        if (Object.keys(updateData).length === 0) {
+            logger.warn("No hay datos para actualizar");
+            return res.status(400).json({
+                message: "No hay datos para actualizar"
+            });
+        }
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { returnDocument: "after", runValidators: true }
+        ).select("-password");
+
+        logger.info(`Usuario actualizado correctamente: ${updatedUser.email}`);
+
+        return res.status(200).json({
+            success: true,
+            user: updatedUser
+        });
+
+    } catch (error) {
+        logger.error("Error en updateUserByAdmin", {
+            message: error.message
+        });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de actualización de perfil por Admin");
+    }
+};
