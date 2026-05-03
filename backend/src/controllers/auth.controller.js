@@ -207,7 +207,7 @@ export const updateProfile = async (req, res) => {
             if (typeof name !== "string" || name.trim().length < 2) {
                 return res.status(400).json({ message: "Nombre inválido" });
             }
-            updateData.name = name.trim();  
+            updateData.name = name.trim();
         }
 
         if (typeof birth_date === "string" && birth_date.trim().length > 0) {
@@ -300,5 +300,53 @@ export const updateProfile = async (req, res) => {
         return res.status(500).json({ message: "Error interno del servidor" });
     } finally {
         logger.info("Fin de actualización de perfil");
+    }
+};
+
+export const toggleUserStatus = async (req, res) => {
+    logger.info("Inicio de toggle de estado de usuario");
+
+    const { id } = req.params;
+
+    try {
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado." });
+        }
+
+        if (req.user._id.toString() === id) {
+            return res.status(400).json({
+                message: "No puedes cambiar tu propio estado."
+            });
+        }
+
+        user.is_active = !user.is_active;
+        await user.save();
+
+        logger.info(`Estado cambiado: ${user.email} → ${user.is_active}`);
+
+        return res.status(200).json({
+            success: true,
+            message: user.is_active
+                ? "Usuario activado."
+                : "Usuario desactivado.",
+            user: {
+                _id: user._id,
+                email: user.email,
+                is_active: user.is_active
+            }
+        });
+
+    } catch (error) {
+        logger.error("Error en toggle de usuario", {
+            message: error.message
+        });
+
+        return res.status(500).json({
+            message: "Error interno del servidor."
+        });
+    } finally {
+        logger.info("Fin de toggle de estado");
     }
 };
