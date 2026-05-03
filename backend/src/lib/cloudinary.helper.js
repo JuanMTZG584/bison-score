@@ -23,3 +23,11 @@ export const uploadImage = (fileBuffer) => {
         ).end(fileBuffer);
     });
 };
+
+export const deleteImage = async (imageUrl) => {
+    const parts = imageUrl.split("/");
+    const filename = parts[parts.length - 1];
+    const publicId = `users/${filename.split(".")[0]}`;
+
+    return await cloudinary.uploader.destroy(publicId);
+};

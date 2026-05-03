@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import logger from "../config/logger.js";
 import { env } from "../config/env.js";
-import { uploadImage } from "../lib/cloudinary.helper.js";
+import { uploadImage, deleteImage } from "../lib/cloudinary.helper.js";
 
 export const signup = async (req, res) => {
     logger.info("Inicio de proceso de registro");
@@ -186,4 +186,119 @@ export const getMe = (req, res) => {
         birth_date: req.user.birth_date,
         role: req.user.role
     });
+};
+
+export const updateProfile = async (req, res) => {
+    logger.info("Inicio de actualización de perfil");
+
+    const userId = req.user._id;
+    const { name, birth_date, password, currentPassword } = req.body;
+
+    try {
+        const updateData = {};
+
+        const user = await User.findById(userId).select("+password");
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        if (typeof name === "string" && name.trim().length > 0) {
+            if (typeof name !== "string" || name.trim().length < 2) {
+                return res.status(400).json({ message: "Nombre inválido" });
+            }
+            updateData.name = name.trim();  
+        }
+
+        if (typeof birth_date === "string" && birth_date.trim().length > 0) {
+            const birthDateObj = new Date(birth_date);
+
+            if (isNaN(birthDateObj.getTime())) {
+                return res.status(400).json({ message: "Fecha no válida" });
+            }
+
+            const today = new Date();
+            let age = today.getFullYear() - birthDateObj.getFullYear();
+            const monthDiff = today.getMonth() - birthDateObj.getMonth();
+
+            if (
+                monthDiff < 0 ||
+                (monthDiff === 0 && today.getDate() < birthDateObj.getDate())
+            ) {
+                age--;
+            }
+
+            if (age < 13) {
+                return res.status(403).json({ message: "Debes tener al menos 13 años." });
+            }
+
+            updateData.birth_date = birthDateObj;
+        }
+
+        if (typeof password === "string" && password.length > 0) {
+            if (!currentPassword) {
+                return res.status(400).json({
+                    message: "Debes proporcionar la contraseña actual"
+                });
+            }
+
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+            if (!isMatch) {
+                return res.status(400).json({
+                    message: "Contraseña actual incorrecta"
+                });
+            }
+
+            if (typeof password !== "string" || password.length < 6) {
+                return res.status(400).json({
+                    message: "La nueva contraseña debe tener al menos 6 caracteres"
+                });
+            }
+
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+        if (req.file) {
+            const result = await uploadImage(req.file.buffer);
+
+            if (user.image_url) {
+                try {
+                    await deleteImage(user.image_url);
+                } catch (err) {
+                    logger.warn("Error eliminando imagen anterior", {
+                        message: err.message
+                    });
+                }
+            }
+
+            updateData.image_url = result.secure_url;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: "No hay datos para actualizar" });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { returnDocument: "after", runValidators: true }
+        ).select("-password");
+
+        logger.info(`Perfil actualizado: ${updatedUser.email}`);
+
+        return res.status(200).json({
+            success: true,
+            user: updatedUser
+        });
+
+    } catch (error) {
+        logger.error("Error al actualizar perfil", {
+            message: error.message
+        });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de actualización de perfil");
+    }
 };

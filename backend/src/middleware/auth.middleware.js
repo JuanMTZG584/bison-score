@@ -26,6 +26,11 @@ export const protectRoute = async (req, res, next) => {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
 
+        if (!user.is_active) {
+            logger.warn(`Usuario inactivo intentando acceder: ${user.email}`);
+            return res.status(403).json({ message: "Usuario deshabilitado" });
+        }
+
         req.user = user;
 
         logger.info(`Usuario autenticado: ${user.email}`);
