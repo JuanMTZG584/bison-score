@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import logger from "../config/logger.js";
 import { env } from "../config/env.js";
-import { uploadImage, deleteImage } from "../lib/cloudinary.helper.js";
+import { deleteImage } from "../lib/cloudinary.helper.js";
 
 export const signup = async (req, res) => {
     logger.info("Inicio de proceso de registro");
@@ -53,12 +53,6 @@ export const signup = async (req, res) => {
     }
 
     try {
-        let image_url;
-
-        if (req.file) {
-            const result = await uploadImage(req.file.buffer);
-            image_url = result.secure_url;
-        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -69,9 +63,9 @@ export const signup = async (req, res) => {
             birth_date: birthDateObj
         };
 
-        if (image_url) {
-            userData.image_url = image_url;
-        }
+        // if (image_url?.trim()) {
+        //     userData.image_url = image_url;
+        // }
 
         const savedUser = await User.create(userData);
 
@@ -192,7 +186,7 @@ export const updateProfile = async (req, res) => {
     logger.info("Inicio de actualización de perfil");
 
     const userId = req.user._id;
-    const { name, birth_date, password, currentPassword } = req.body;
+    const { name, birth_date, password, currentPassword, image_url } = req.body;
 
     try {
         const updateData = {};
@@ -259,20 +253,18 @@ export const updateProfile = async (req, res) => {
             updateData.password = await bcrypt.hash(password, 10);
         }
 
-        if (req.file) {
-            const result = await uploadImage(req.file.buffer);
-
+        if (typeof image_url === "string" && image_url.trim() !== "") {
             if (user.image_url) {
                 try {
                     await deleteImage(user.image_url);
                 } catch (err) {
-                    logger.warn("Error eliminando imagen anterior", {
+                    logger.warn("No se pudo borrar imagen anterior", {
                         message: err.message
                     });
                 }
             }
 
-            updateData.image_url = result.secure_url;
+            updateData.image_url = image_url.trim();
         }
 
         if (Object.keys(updateData).length === 0) {
