@@ -15,7 +15,7 @@ router.get("/options", getPlatformOptions);
 router.post("/", protectRoute, requireAdmin, createPlatform);
 
 //UPDATE Platform (Admin) (protectRoute, requireAdmin)
-router.put(("/:id"), updatePlatform);
+router.put(("/:id"), protectRoute, requireAdmin, updatePlatform);
 
 //DELETE Platform (Admin) (protectRoute, requireAdmin)
 router.delete(("/:id"), deletePlatform);
