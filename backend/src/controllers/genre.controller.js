@@ -10,7 +10,58 @@ export const getGenreOptions = async (req, res) => {
 };
 
 export const createGenre = async (req, res) => {
-    return res.status(200).json({ message: "Creación de generos" });
+    logger.info("Inicio de creación de género");
+
+    const { name, description } = req.body;
+
+    if (!name || !description) {
+        logger.warn("Campos incompletos en creación de género");
+        return res.status(400).json({ message: "Debes completar todos los campos." });
+    }
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+        logger.warn("Nombre inválido");
+        return res.status(400).json({ message: "Nombre no válido." });
+    }
+
+    const trimmedDescription = description.trim();
+    if (!trimmedDescription) {
+        logger.warn("Descripción inválida");
+        return res.status(400).json({ message: "Descripción no válida." });
+    }
+
+    try {
+        const existingGenre = await Genre.findOne({
+            name: { $regex: `^${trimmedName}$`, $options: "i" }
+        });
+
+        if (existingGenre) {
+            logger.warn(`Género duplicado: ${trimmedName}`);
+            return res.status(400).json({message: "Este género ya existe."});
+        }
+
+        const savedGenre = await Genre.create({
+            name: trimmedName,
+            description: trimmedDescription
+        });
+
+        logger.info(`Género creado correctamente: ${trimmedName}`);
+
+        return res.status(201).json(savedGenre);
+
+    } catch (error) {
+        if (error.code === 11000) {
+            logger.warn(`Duplicado en DB: ${trimmedName}`);
+            return res.status(400).json({message: "Este género ya existe."});
+        }
+
+        logger.error("Error en creación de género", {message: error.message});
+
+        return res.status(500).json({message: "Error interno del servidor."});
+    } finally {
+        logger.info("Fin de creación de género");
+    }
 };
 
 export const updateGenre = async (req, res) => {
