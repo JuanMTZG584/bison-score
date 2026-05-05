@@ -6,7 +6,27 @@ export const getAllPlatforms = async (req, res) => {
 };
 
 export const getPlatformOptions = async (req, res) => {
-    res.status(200).json({ message: "Plataformas user" });
+    logger.info("Inicio de obtención de opciones de plataformas");
+
+    try {
+        const platforms = await Platform.find({ is_active: true })
+            .select("_id name")
+            .sort({ name: 1 });
+
+        logger.info(`Plataformas activas obtenidas: ${platforms.length}`);
+
+        return res.status(200).json({
+            success: true,
+            platforms
+        });
+
+    } catch (error) {
+        logger.error("Error al obtener opciones de plataformas", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de obtención de opciones de plataformas");
+    }
 };
 
 export const createPlatform = async (req, res) => {
