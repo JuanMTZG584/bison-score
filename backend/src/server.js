@@ -2,6 +2,7 @@ import { env } from "./config/env.js";
 import express from "express";
 import authRoutes from "./routes/auth.route.js";
 import platformRoutes from "./routes/platform.route.js";
+import genreRoutes from "./routes/genre.route.js";
 import path from "path";
 import { connectDB } from "./lib/db.js";
 import cookieParser from "cookie-parser";
@@ -15,6 +16,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/platforms",platformRoutes);
+app.use("/api/genres",genreRoutes);
 
 //make ready for deployment
 if (env.NODE_ENV === "production") {

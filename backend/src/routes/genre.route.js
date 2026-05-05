@@ -1,0 +1,23 @@
+import express from "express";
+import { getAllGenres, getGenreOptions, createGenre, updateGenre, toggleGenreStatus } from "../controllers/genre.controller.js";
+import { protectRoute } from "../middleware/auth.middleware.js";
+import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
+
+const router = express.Router();
+
+//READ Genres for Admin EJ: GET /api/genres?page=1&limit=10&search=sony&is_active=true
+router.get("/", getAllGenres);
+
+//READ Genres for Users
+router.get("/options", getGenreOptions);
+
+//CREATE Genres (Admin) (protectRoute, requireAdmin)
+router.post("/", createGenre);
+
+//UPDATE Genres (Admin) (protectRoute, requireAdmin)
+router.put(("/:id"), updateGenre);
+
+//PATCH Genres (Admin) (protectRoute, requireAdmin)
+router.patch(("/:id/toggle"), toggleGenreStatus);
+
+export default router;
