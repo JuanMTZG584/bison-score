@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllPlatforms, getPlatformOptions, createPlatform, updatePlatform, deletePlatform } from "../controllers/platform.controller.js";
+import { getAllPlatforms, getPlatformOptions, createPlatform, updatePlatform, togglePlatformStatus } from "../controllers/platform.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 
@@ -17,7 +17,7 @@ router.post("/", protectRoute, requireAdmin, createPlatform);
 //UPDATE Platform (Admin) (protectRoute, requireAdmin)
 router.put(("/:id"), protectRoute, requireAdmin, updatePlatform);
 
-//DELETE Platform (Admin) (protectRoute, requireAdmin)
-router.delete(("/:id"), deletePlatform);
+//PATCH Platform (Admin) (protectRoute, requireAdmin)
+router.patch(("/:id/toggle"), protectRoute, requireAdmin, togglePlatformStatus);
 
 export default router;

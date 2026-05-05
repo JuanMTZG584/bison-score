@@ -163,6 +163,40 @@ export const updatePlatform = async (req, res) => {
     }
 };
 
-export const deletePlatform = async (req, res) => {
-    res.status(200).json({ message: "Eliminar Plataformas" });
+export const togglePlatformStatus = async (req, res) => {
+    logger.info("Inicio de toggle de estado de plataforma");
+
+    const { id } = req.params;
+
+    try {
+        const platform = await Platform.findById(id);
+
+        if (!platform) {
+            return res.status(404).json({ message: "Plataforma no encontrada." });
+        }
+
+        platform.is_active = !platform.is_active;
+        await platform.save();
+
+        logger.info(`Estado cambiado: ${platform.name} → ${platform.is_active}`);
+
+        return res.status(200).json({
+            success: true,
+            message: platform.is_active
+                ? "Plataforma activada."
+                : "Plataforma desactivada.",
+            platform: {
+                _id: platform._id,
+                name: platform.name,
+                is_active: platform.is_active
+            }
+        });
+
+    } catch (error) {
+        logger.error("Error en toggle de plataforma", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor." });
+    } finally {
+        logger.info("Fin de toggle de estado de plataforma");
+    }
 };
