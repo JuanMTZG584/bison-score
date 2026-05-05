@@ -2,7 +2,57 @@ import Platform from "../models/Platform.js";
 import logger from "../config/logger.js";
 
 export const getAllPlatforms = async (req, res) => {
-    res.status(200).json({ message: "Plataformas admin" });
+    logger.info("Inicio de listado de plataformas");
+
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const is_active = req.query.is_active;
+        const search = req.query.search;
+
+        const skip = (page - 1) * limit;
+
+        const filter = {};
+
+        if (is_active !== undefined) {
+            filter.is_active = is_active === "true";
+        }
+
+        if (search && search.trim().length > 0) {
+            const regex = new RegExp(search.trim(), "i");
+
+            filter.$or = [
+                { name: regex },
+                { manufacturer: regex }
+            ];
+        }
+
+        const [platforms, total] = await Promise.all([
+            Platform.find(filter)
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Platform.countDocuments(filter)
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            success: true,
+            page,
+            totalPages,
+            totalPlatforms: total,
+            platforms
+        });
+
+    } catch (error) {
+        logger.error("Error al listar plataformas", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de listado de plataformas");
+    }
 };
 
 export const getPlatformOptions = async (req, res) => {

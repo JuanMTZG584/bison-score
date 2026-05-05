@@ -5,10 +5,10 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 
 const router = express.Router();
 
-//READ Platforms for Admin (protectRoute, requireAdmin)
-router.get("/", getAllPlatforms);
+//READ Platforms for Admin EJ: GET /api/platforms?page=1&limit=10&search=sony&is_active=true
+router.get("/", protectRoute, requireAdmin, getAllPlatforms);
 
-//READ Platforms for Users (protectRoute)?
+//READ Platforms for Users
 router.get("/options", getPlatformOptions);
 
 //CREATE Plafrom (Admin) (protectRoute, requireAdmin)
