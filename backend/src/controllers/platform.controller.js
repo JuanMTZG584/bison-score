@@ -76,7 +76,91 @@ export const createPlatform = async (req, res) => {
 };
 
 export const updatePlatform = async (req, res) => {
-    res.status(200).json({ message: "Actualizar Plataformas" });
+    logger.info("Inicio de actualización de plataforma");
+
+    const { id } = req.params;
+    const { name, manufacturer, release_date } = req.body;
+
+    try {
+        const updateData = {};
+
+        const platform = await Platform.findById(id);
+
+        if (!platform) {
+            logger.warn("Plataforma no encontrada");
+            return res.status(404).json({ message: "Plataforma no encontrada" });
+        }
+
+        if (!platform.is_active) {
+            logger.warn(`Intento de actualizar plataforma inactiva: ${id}`);
+            return res.status(403).json({ message: "No se puede actualizar una plataforma inactiva" });
+        }
+
+        if (typeof name === "string" && name.trim().length > 0) {
+            const trimmedName = name.trim();
+
+            const existingPlatform = await Platform.findOne({
+                _id: { $ne: id },
+                name: { $regex: `^${trimmedName}$`, $options: "i" }
+            });
+
+            if (existingPlatform) {
+                logger.warn("Plataforma existente con el mismo nombre");
+                return res.status(400).json({ message: "Ya existe otra plataforma con ese nombre" });
+            }
+
+            updateData.name = trimmedName;
+        }
+
+        if (typeof manufacturer === "string" && manufacturer.trim().length > 0) {
+            updateData.manufacturer = manufacturer.trim();
+        }
+
+        if (typeof release_date === "string" && release_date.trim().length > 0) {
+            const releaseDateObj = new Date(release_date);
+
+            if (isNaN(releaseDateObj.getTime())) {
+                return res.status(400).json({ message: "Fecha de lanzamiento no válida" });
+            }
+
+            const today = new Date();
+
+            if (releaseDateObj > today) {
+                return res.status(400).json({ message: "La fecha de lanzamiento no puede ser futura" });
+            }
+
+            updateData.release_date = releaseDateObj;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: "No hay datos para actualizar" });
+        }
+
+        const updatedPlatform = await Platform.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { returnDocument: "after", runValidators: true }
+        );
+
+        logger.info(`Plataforma actualizada: ${updatedPlatform.name}`);
+
+        return res.status(200).json({
+            success: true,
+            platform: updatedPlatform
+        });
+
+    } catch (error) {
+        if (error.code === 11000) {
+            logger.warn("Duplicado en DB al actualizar plataforma");
+            return res.status(400).json({ message: "Ya existe una plataforma con ese nombre" });
+        }
+
+        logger.error("Error al actualizar plataforma", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de actualización de plataforma");
+    }
 };
 
 export const deletePlatform = async (req, res) => {
