@@ -12,7 +12,7 @@ router.get("/", getAllPlatforms);
 router.get("/options", getPlatformOptions);
 
 //CREATE Plafrom (Admin) (protectRoute, requireAdmin)
-router.post("/", createPlatform);
+router.post("/", protectRoute, requireAdmin, createPlatform);
 
 //UPDATE Platform (Admin) (protectRoute, requireAdmin)
 router.put(("/:id"), updatePlatform);
