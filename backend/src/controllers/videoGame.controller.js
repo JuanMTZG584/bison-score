@@ -275,5 +275,65 @@ export const updateVideoGame = async (req, res) => {
 };
 
 export const toggleVideoGameStatus = async (req, res) => {
-    return res.status(200).json("Toggle de estatus del Videojuego");
+    logger.info("Inicio de toggle de estado de videojuego");
+
+    const { id } = req.params;
+
+    try {
+        const videoGame = await VideoGame.findById(id);
+
+        if (!videoGame) {
+            return res.status(404).json({ message: "Videojuego no encontrado." });
+        }
+
+        if (!videoGame.is_active) {
+
+            const [platform, genre] = await Promise.all([Platform.findById(videoGame.platform_id), Genre.findById(videoGame.genre_id)]);
+
+            if (!platform) {
+                return res.status(400).json({ message: "La plataforma asociada no existe." });
+            }
+
+            if (!genre) {
+                return res.status(400).json({ message: "El género asociado no existe." });
+            }
+
+            if (!platform.is_active) {
+                logger.warn(`Intento de activar videojuego con plataforma inactiva: ${platform.name}`);
+
+                return res.status(400).json({ message: "No se puede activar el videojuego porque su plataforma está inactiva." });
+            }
+
+            if (!genre.is_active) {
+                logger.warn(`Intento de activar videojuego con género inactivo: ${genre.name}`);
+
+                return res.status(400).json({ message: "No se puede activar el videojuego porque su género está inactivo." });
+            }
+        }
+
+        videoGame.is_active = !videoGame.is_active;
+
+        await videoGame.save();
+
+        logger.info(`Estado cambiado: ${videoGame.title} → ${videoGame.is_active}`);
+
+        return res.status(200).json({
+            success: true,
+            message: videoGame.is_active
+                ? "Videojuego activado."
+                : "Videojuego desactivado.",
+            videoGame: {
+                _id: videoGame._id,
+                title: videoGame.title,
+                is_active: videoGame.is_active
+            }
+        });
+
+    } catch (error) {
+        logger.error("Error en toggle de videojuego", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor." });
+    } finally {
+        logger.info("Fin de toggle de estado de videojuego");
+    }
 };
