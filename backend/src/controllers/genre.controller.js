@@ -2,11 +2,81 @@ import Genre from "../models/Genre.js";
 import logger from "../config/logger.js";
 
 export const getAllGenres = async (req, res) => {
-    return res.status(200).json({ message: "Listado completo de generos para Admins" });
+    logger.info("Inicio de listado de géneros");
+
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const is_active = req.query.is_active;
+        const search = req.query.search;
+
+        const skip = (page - 1) * limit;
+
+        const filter = {};
+
+        if (is_active !== undefined) {
+            filter.is_active = is_active === "true";
+        }
+
+        if (search && search.trim().length > 0) {
+            const regex = new RegExp(search.trim(), "i");
+
+            filter.$or = [
+                { name: regex },
+                { description: regex }
+            ];
+        }
+
+        const [genres, total] = await Promise.all([
+            Genre.find(filter)
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            Genre.countDocuments(filter)
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            success: true,
+            page,
+            totalPages,
+            totalGenres: total,
+            genres
+        });
+
+    } catch (error) {
+        logger.error("Error al listar géneros", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de listado de géneros");
+    }
 };
 
 export const getGenreOptions = async (req, res) => {
-    return res.status(200).json({ message: "Listado de opciones de genero para Usuarios" });
+    logger.info("Inicio de obtención de opciones de géneros");
+
+    try {
+        const genres = await Genre.find({ is_active: true })
+            .select("_id name")
+            .sort({ name: 1 });
+
+        logger.info(`Géneros activos obtenidos: ${genres.length}`);
+
+        return res.status(200).json({
+            success: true,
+            genres
+        });
+
+    } catch (error) {
+        logger.error("Error al obtener opciones de géneros", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de obtención de opciones de géneros");
+    }
 };
 
 export const createGenre = async (req, res) => {
@@ -145,7 +215,7 @@ export const toggleGenreStatus = async (req, res) => {
         const genre = await Genre.findById(id);
 
         if (!genre) {
-            return res.status(404).json({message: "Género no encontrado."});
+            return res.status(404).json({ message: "Género no encontrado." });
         }
 
         genre.is_active = !genre.is_active;
@@ -166,9 +236,9 @@ export const toggleGenreStatus = async (req, res) => {
         });
 
     } catch (error) {
-        logger.error("Error en toggle de género", {message: error.message});
+        logger.error("Error en toggle de género", { message: error.message });
 
-        return res.status(500).json({message: "Error interno del servidor."});
+        return res.status(500).json({ message: "Error interno del servidor." });
     } finally {
         logger.info("Fin de toggle de estado de género");
     }

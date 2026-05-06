@@ -5,7 +5,7 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 
 const router = express.Router();
 
-//READ Genres for Admin EJ: GET /api/genres?page=1&limit=10&search=sony&is_active=true
+//READ Genres for Admin EJ: GET /api/genres?page=1&limit=10&search=RPG&is_active=true
 router.get("/", getAllGenres);
 
 //READ Genres for Users
