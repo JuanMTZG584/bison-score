@@ -5,7 +5,7 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 
 const router = express.Router();
 
-//READ Videogames for Admins EJ: GET /api/videogames?page=1&limit=10&search=halo&is_active=true
+//READ Videogames for Admins EJ: GET /api/videogames/?page=1&limit=5&search=halo&is_active=true&platform_id=681a72c4f0d9f1c8a5e3b123
 // (protectRoute, requiereAdmin)
 router.get("/", getAllVideoGames);
 

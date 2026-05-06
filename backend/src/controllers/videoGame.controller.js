@@ -5,7 +5,72 @@ import logger from "../config/logger.js";
 import { deleteImage } from "../lib/cloudinary.helper.js";
 
 export const getAllVideoGames = async (req, res) => {
-    return res.status(200).json("Lista de juegos para Admins");
+    logger.info("Inicio de listado de videojuegos");
+
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const is_active = req.query.is_active;
+        const search = req.query.search;
+
+        const platform_id = req.query.platform_id;
+        const genre_id = req.query.genre_id;
+
+        const skip = (page - 1) * limit;
+
+        const filter = {};
+
+        if (is_active !== undefined) {
+            filter.is_active = is_active === "true";
+        }
+
+        if (typeof platform_id === "string" && platform_id.trim().length > 0) {
+            filter.platform_id = platform_id;
+        }
+
+        if (typeof genre_id === "string" && genre_id.trim().length > 0) {
+            filter.genre_id = genre_id;
+        }
+
+        if (search && search.trim().length > 0) {
+            const regex = new RegExp(search.trim(), "i");
+
+            filter.$or = [
+                { title: regex },
+                { developer: regex },
+                { description: regex }
+            ];
+        }
+
+        const [videoGames, total] = await Promise.all([
+            VideoGame.find(filter)
+                .populate("platform_id", "_id name manufacturer")
+                .populate("genre_id", "_id name")
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            VideoGame.countDocuments(filter)
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            success: true,
+            page,
+            totalPages,
+            totalVideoGames: total,
+            videoGames
+        });
+
+    } catch (error) {
+        logger.error("Error al listar videojuegos", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de listado de videojuegos");
+    }
 };
 
 export const getVideoGameOptions = async (req, res) => {
