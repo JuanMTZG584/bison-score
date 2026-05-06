@@ -38,7 +38,7 @@ export const createGenre = async (req, res) => {
 
         if (existingGenre) {
             logger.warn(`Género duplicado: ${trimmedName}`);
-            return res.status(400).json({message: "Este género ya existe."});
+            return res.status(400).json({ message: "Este género ya existe." });
         }
 
         const savedGenre = await Genre.create({
@@ -53,19 +53,87 @@ export const createGenre = async (req, res) => {
     } catch (error) {
         if (error.code === 11000) {
             logger.warn(`Duplicado en DB: ${trimmedName}`);
-            return res.status(400).json({message: "Este género ya existe."});
+            return res.status(400).json({ message: "Este género ya existe." });
         }
 
-        logger.error("Error en creación de género", {message: error.message});
+        logger.error("Error en creación de género", { message: error.message });
 
-        return res.status(500).json({message: "Error interno del servidor."});
+        return res.status(500).json({ message: "Error interno del servidor." });
     } finally {
         logger.info("Fin de creación de género");
     }
 };
 
 export const updateGenre = async (req, res) => {
-    return res.status(200).json({ message: "Actualización de generos" });
+    logger.info("Inicio de actualización de género");
+
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    try {
+        const updateData = {};
+
+        const genre = await Genre.findById(id);
+
+        if (!genre) {
+            logger.warn("Género no encontrado");
+            return res.status(404).json({ message: "Género no encontrado" });
+        }
+
+        if (!genre.is_active) {
+            logger.warn(`Intento de actualizar género inactivo: ${id}`);
+            return res.status(403).json({message: "No se puede actualizar un género inactivo"});
+        }
+
+        if (typeof name === "string" && name.trim().length > 0) {
+            const trimmedName = name.trim();
+
+            const existingGenre = await Genre.findOne({
+                _id: { $ne: id },
+                name: { $regex: `^${trimmedName}$`, $options: "i" }
+            });
+
+            if (existingGenre) {
+                logger.warn("Género existente con el mismo nombre");
+                return res.status(400).json({message: "Ya existe otro género con ese nombre"});
+            }
+
+            updateData.name = trimmedName;
+        }
+
+        if (typeof description === "string" && description.trim().length > 0) {
+            updateData.description = description.trim();
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({message: "No hay datos para actualizar"});
+        }
+
+        const updatedGenre = await Genre.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { returnDocument: "after", runValidators: true }
+        );
+
+        logger.info(`Género actualizado: ${updatedGenre.name}`);
+
+        return res.status(200).json({
+            success: true,
+            genre: updatedGenre
+        });
+
+    } catch (error) {
+        if (error.code === 11000) {
+            logger.warn("Duplicado en DB al actualizar género");
+            return res.status(400).json({message: "Ya existe un género con ese nombre"});
+        }
+
+        logger.error("Error al actualizar género", {message: error.message});
+
+        return res.status(500).json({message: "Error interno del servidor"});
+    } finally {
+        logger.info("Fin de actualización de género");
+    }
 };
 
 export const toggleGenreStatus = async (req, res) => {
