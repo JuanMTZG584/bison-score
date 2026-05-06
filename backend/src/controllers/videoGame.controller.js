@@ -2,6 +2,7 @@ import VideoGame from "../models/VideoGame.js";
 import Platform from "../models/Platform.js";
 import Genre from "../models/Genre.js";
 import logger from "../config/logger.js";
+import { deleteImage } from "../lib/cloudinary.helper.js";
 
 export const getAllVideoGames = async (req, res) => {
     return res.status(200).json("Lista de juegos para Admins");
@@ -122,7 +123,155 @@ export const createVideoGame = async (req, res) => {
 };
 
 export const updateVideoGame = async (req, res) => {
-    return res.status(200).json("Actualización de Videojuego");
+    logger.info("Inicio de actualización de videojuego");
+
+    const { id } = req.params;
+
+    const { title, description, release_date, developer, image_url, platform_id, genre_id } = req.body;
+
+    try {
+        const updateData = {};
+
+        const videoGame = await VideoGame.findById(id);
+
+        if (!videoGame) {
+            logger.warn("Videojuego no encontrado");
+
+            return res.status(404).json({ message: "Videojuego no encontrado" });
+        }
+
+        if (!videoGame.is_active) {
+            logger.warn(`Intento de actualizar videojuego inactivo: ${id}`);
+
+            return res.status(403).json({ message: "No se puede actualizar un videojuego inactivo" });
+        }
+
+        if (typeof title === "string" && title.trim().length > 0) {
+            const trimmedTitle = title.trim();
+
+            const existingVideoGame = await VideoGame.findOne({
+                _id: { $ne: id },
+                title: { $regex: `^${trimmedTitle}$`, $options: "i" },
+                platform_id: platform_id || videoGame.platform_id
+            });
+
+            if (existingVideoGame) {
+                logger.warn("Videojuego existente con el mismo título y plataforma");
+
+                return res.status(400).json({ message: "Ya existe un videojuego con ese título en esa plataforma" });
+            }
+
+            updateData.title = trimmedTitle;
+        }
+
+        if (typeof description === "string" && description.trim().length > 0) {
+            updateData.description = description.trim();
+        }
+
+        if (typeof developer === "string" && developer.trim().length > 0) {
+            updateData.developer = developer.trim();
+        }
+
+        if (typeof image_url === "string" && image_url.trim() !== "") {
+
+            if (videoGame.image_url && !videoGame.image_url.includes("dicebear")) {
+                try {
+                    await deleteImage(videoGame.image_url);
+                } catch (err) {
+                    logger.warn("No se pudo borrar imagen anterior del videojuego", { message: err.message });
+                }
+            }
+
+            updateData.image_url = image_url.trim();
+        }
+
+        if (typeof release_date === "string" && release_date.trim().length > 0) {
+            const releaseDateObj = new Date(release_date);
+
+            if (isNaN(releaseDateObj.getTime())) {
+                return res.status(400).json({ message: "Fecha de lanzamiento no válida" });
+            }
+
+            const today = new Date();
+
+            if (releaseDateObj > today) {
+                return res.status(400).json({ message: "La fecha de lanzamiento no puede ser futura" });
+            }
+
+            updateData.release_date = releaseDateObj;
+        }
+
+        if (typeof platform_id === "string" && platform_id.trim().length > 0) {
+            const platform = await Platform.findById(platform_id);
+
+            if (!platform) {
+                return res.status(400).json({ message: "Plataforma no válida" });
+            }
+
+            if (!platform.is_active) {
+                return res.status(400).json({ message: "La plataforma seleccionada está inactiva" });
+            }
+
+            updateData.platform_id = platform_id;
+        }
+
+        if (typeof genre_id === "string" && genre_id.trim().length > 0) {
+            const genre = await Genre.findById(genre_id);
+
+            if (!genre) {
+                return res.status(400).json({ message: "Género no válido" });
+            }
+
+            if (!genre.is_active) {
+                return res.status(400).json({ message: "El género seleccionado está inactivo" });
+            }
+
+            updateData.genre_id = genre_id;
+        }
+
+        if (updateData.platform_id && !updateData.title) {
+            const existingVideoGame = await VideoGame.findOne({
+                _id: { $ne: id },
+                title: { $regex: `^${videoGame.title}$`, $options: "i" },
+                platform_id: updateData.platform_id
+            });
+
+            if (existingVideoGame) {
+                return res.status(400).json({ message: "Ya existe un videojuego con ese título en esa plataforma" });
+            }
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: "No hay datos para actualizar" });
+        }
+
+        const updatedVideoGame = await VideoGame.findByIdAndUpdate(id, { $set: updateData },
+            {
+                returnDocument: "after",
+                runValidators: true
+            }
+        ).populate("platform_id", "name").populate("genre_id", "name");
+
+        logger.info(`Videojuego actualizado: ${updatedVideoGame.title}`);
+
+        return res.status(200).json({
+            success: true,
+            videoGame: updatedVideoGame
+        });
+
+    } catch (error) {
+        if (error.code === 11000) {
+            logger.warn("Duplicado en DB al actualizar videojuego");
+
+            return res.status(400).json({ message: "Ya existe un videojuego con esos datos" });
+        }
+
+        logger.error("Error al actualizar videojuego", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de actualización de videojuego");
+    }
 };
 
 export const toggleVideoGameStatus = async (req, res) => {
