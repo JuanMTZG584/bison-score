@@ -27,7 +27,10 @@ const videoGameSchema = new mongoose.Schema(
 
     image_url: {
       type: String,
-      trim: true
+      default: function () {
+        return `https://api.dicebear.com/7.x/initials/svg?seed=${this.title}`;
+      },
+       trim: true
     },
 
     genre_id: {
