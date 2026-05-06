@@ -82,7 +82,7 @@ export const updateGenre = async (req, res) => {
 
         if (!genre.is_active) {
             logger.warn(`Intento de actualizar género inactivo: ${id}`);
-            return res.status(403).json({message: "No se puede actualizar un género inactivo"});
+            return res.status(403).json({ message: "No se puede actualizar un género inactivo" });
         }
 
         if (typeof name === "string" && name.trim().length > 0) {
@@ -95,7 +95,7 @@ export const updateGenre = async (req, res) => {
 
             if (existingGenre) {
                 logger.warn("Género existente con el mismo nombre");
-                return res.status(400).json({message: "Ya existe otro género con ese nombre"});
+                return res.status(400).json({ message: "Ya existe otro género con ese nombre" });
             }
 
             updateData.name = trimmedName;
@@ -106,7 +106,7 @@ export const updateGenre = async (req, res) => {
         }
 
         if (Object.keys(updateData).length === 0) {
-            return res.status(400).json({message: "No hay datos para actualizar"});
+            return res.status(400).json({ message: "No hay datos para actualizar" });
         }
 
         const updatedGenre = await Genre.findByIdAndUpdate(
@@ -125,17 +125,51 @@ export const updateGenre = async (req, res) => {
     } catch (error) {
         if (error.code === 11000) {
             logger.warn("Duplicado en DB al actualizar género");
-            return res.status(400).json({message: "Ya existe un género con ese nombre"});
+            return res.status(400).json({ message: "Ya existe un género con ese nombre" });
         }
 
-        logger.error("Error al actualizar género", {message: error.message});
+        logger.error("Error al actualizar género", { message: error.message });
 
-        return res.status(500).json({message: "Error interno del servidor"});
+        return res.status(500).json({ message: "Error interno del servidor" });
     } finally {
         logger.info("Fin de actualización de género");
     }
 };
 
 export const toggleGenreStatus = async (req, res) => {
-    return res.status(200).json({ message: "Toggle de estatus de generos" });
+    logger.info("Inicio de toggle de estado de género");
+
+    const { id } = req.params;
+
+    try {
+        const genre = await Genre.findById(id);
+
+        if (!genre) {
+            return res.status(404).json({message: "Género no encontrado."});
+        }
+
+        genre.is_active = !genre.is_active;
+        await genre.save();
+
+        logger.info(`Estado cambiado: ${genre.name} → ${genre.is_active}`);
+
+        return res.status(200).json({
+            success: true,
+            message: genre.is_active
+                ? "Género activado."
+                : "Género desactivado.",
+            genre: {
+                _id: genre._id,
+                name: genre.name,
+                is_active: genre.is_active
+            }
+        });
+
+    } catch (error) {
+        logger.error("Error en toggle de género", {message: error.message});
+
+        return res.status(500).json({message: "Error interno del servidor."});
+    } finally {
+        logger.info("Fin de toggle de estado de género");
+    }
 };
