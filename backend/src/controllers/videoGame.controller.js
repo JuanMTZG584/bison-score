@@ -260,6 +260,18 @@ export const createVideoGame = async (req, res) => {
     }
 
     try {
+        if (!mongoose.Types.ObjectId.isValid(platform_id)) {
+            logger.warn("ID de plataforma inválido");
+
+            return res.status(400).json({ message: "ID de plataforma no válido." });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(genre_id)) {
+            logger.warn("ID de género inválido");
+
+            return res.status(400).json({ message: "ID de género no válido." });
+        }
+
         const [platform, genre] = await Promise.all([Platform.findById(platform_id), Genre.findById(genre_id)]);
 
         if (!platform) {
@@ -292,18 +304,20 @@ export const createVideoGame = async (req, res) => {
             return res.status(400).json({ message: "Este videojuego ya existe para esa plataforma." });
         }
 
-        const savedVideoGame = await VideoGame.create({
+        const videoGameData = {
             title: trimmedTitle,
             description: trimmedDescription,
             release_date: releaseDateObj,
             developer: trimmedDeveloper,
             platform_id,
             genre_id
-        });
+        };
 
         if (typeof image_url === "string" && image_url.trim() !== "") {
             videoGameData.image_url = image_url.trim();
         }
+
+        const savedVideoGame = await VideoGame.create(videoGameData);
 
         logger.info(`Videojuego creado correctamente: ${trimmedTitle}`);
 
