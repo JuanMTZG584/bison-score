@@ -165,7 +165,56 @@ export const getVideoGameOptions = async (req, res) => {
 };
 
 export const getVideoGameDetails = async (req, res) => {
-    return res.status(200).json("Detalles de Videjuego");
+    logger.info("Inicio de obtención de detalles de videojuego");
+
+    const { id } = req.params;
+
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn("ID de videojuego inválido");
+
+            return res.status(400).json({ message: "ID de videojuego no válido." });
+        }
+
+        const videoGame = await VideoGame.findOne({ _id: id, is_active: true })
+            .populate("platform_id",
+                `
+          _id
+          name
+          manufacturer
+          release_date
+        `
+            )
+            .populate(
+                "genre_id",
+                `
+          _id
+          name
+          description
+        `
+            );
+
+        if (!videoGame) {
+            logger.warn(`Videojuego no encontrado: ${id}`);
+
+            return res.status(404).json({ message: "Videojuego no encontrado." });
+        }
+
+        logger.info(`Detalles obtenidos: ${videoGame.title}`);
+
+        return res.status(200).json({
+            success: true,
+            videoGame
+        });
+
+    } catch (error) {
+        logger.error("Error al obtener detalles de videojuego", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor." });
+    } finally {
+        logger.info("Fin de obtención de detalles de videojuego");
+    }
 };
 
 export const createVideoGame = async (req, res) => {
