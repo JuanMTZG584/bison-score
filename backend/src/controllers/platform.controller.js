@@ -152,6 +152,13 @@ export const updatePlatform = async (req, res) => {
     const { name, manufacturer, release_date } = req.body;
 
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn(`ID de plataforma inválido: ${id}`);
+
+            return res.status(400).json({ message: "ID de plataforma no válido" });
+        }
+
         const updateData = {};
 
         const platform = await Platform.findById(id);
@@ -239,6 +246,11 @@ export const togglePlatformStatus = async (req, res) => {
     const { id } = req.params;
 
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "ID de plataforma no válido." });
+        }
+
         const platform = await Platform.findById(id);
 
         if (!platform) {
