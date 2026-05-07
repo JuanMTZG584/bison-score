@@ -30,7 +30,19 @@ const videoGameSchema = new mongoose.Schema(
       default: function () {
         return `https://api.dicebear.com/7.x/initials/svg?seed=${this.title}`;
       },
-       trim: true
+      trim: true
+    },
+
+    rating_average: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100
+    },
+
+    rating_count: {
+      type: Number,
+      default: 0
     },
 
     genre_id: {
