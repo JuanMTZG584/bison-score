@@ -27,10 +27,20 @@ export const getAllVideoGames = async (req, res) => {
         }
 
         if (typeof platform_id === "string" && platform_id.trim().length > 0) {
+
+            if (!mongoose.Types.ObjectId.isValid(platform_id)) {
+                return res.status(400).json({ message: "Id de plataforma no válido." });
+            }
+
             filter.platform_id = platform_id;
         }
 
         if (typeof genre_id === "string" && genre_id.trim().length > 0) {
+
+            if (!mongoose.Types.ObjectId.isValid(genre_id)) {
+                return res.status(400).json({ message: "Id de género no válido." });
+            }
+
             filter.genre_id = genre_id;
         }
 
@@ -91,11 +101,21 @@ export const getVideoGameOptions = async (req, res) => {
             is_active: true
         };
 
-        if (typeof platform_id === "string" &&platform_id.trim().length > 0) {
+        if (typeof platform_id === "string" && platform_id.trim().length > 0) {
+
+            if (!mongoose.Types.ObjectId.isValid(platform_id)) {
+                return res.status(400).json({ message: "Id de plataforma no válido." });
+            }
+
             filter.platform_id = platform_id;
         }
 
         if (typeof genre_id === "string" && genre_id.trim().length > 0) {
+
+            if (!mongoose.Types.ObjectId.isValid(genre_id)) {
+                return res.status(400).json({ message: "Id de género no válido." });
+            }
+
             filter.genre_id = genre_id;
         }
 
