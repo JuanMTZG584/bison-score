@@ -29,7 +29,7 @@ export const getAllVideoGames = async (req, res) => {
         if (typeof platform_id === "string" && platform_id.trim().length > 0) {
 
             if (!mongoose.Types.ObjectId.isValid(platform_id)) {
-                return res.status(400).json({ message: "Id de plataforma no válido." });
+                return res.status(400).json({ message: "ID de plataforma no válido." });
             }
 
             filter.platform_id = platform_id;
@@ -38,7 +38,7 @@ export const getAllVideoGames = async (req, res) => {
         if (typeof genre_id === "string" && genre_id.trim().length > 0) {
 
             if (!mongoose.Types.ObjectId.isValid(genre_id)) {
-                return res.status(400).json({ message: "Id de género no válido." });
+                return res.status(400).json({ message: "ID de género no válido." });
             }
 
             filter.genre_id = genre_id;
@@ -104,7 +104,7 @@ export const getVideoGameOptions = async (req, res) => {
         if (typeof platform_id === "string" && platform_id.trim().length > 0) {
 
             if (!mongoose.Types.ObjectId.isValid(platform_id)) {
-                return res.status(400).json({ message: "Id de plataforma no válido." });
+                return res.status(400).json({ message: "ID de plataforma no válido." });
             }
 
             filter.platform_id = platform_id;
@@ -113,7 +113,7 @@ export const getVideoGameOptions = async (req, res) => {
         if (typeof genre_id === "string" && genre_id.trim().length > 0) {
 
             if (!mongoose.Types.ObjectId.isValid(genre_id)) {
-                return res.status(400).json({ message: "Id de género no válido." });
+                return res.status(400).json({ message: "ID de género no válido." });
             }
 
             filter.genre_id = genre_id;
@@ -345,6 +345,12 @@ export const updateVideoGame = async (req, res) => {
     const { title, description, release_date, developer, image_url, platform_id, genre_id } = req.body;
 
     try {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn("ID de videojuego inválido");
+
+            return res.status(400).json({ message: "ID de videojuego no válido" });
+        }
+
         const updateData = {};
 
         const videoGame = await VideoGame.findById(id);
@@ -417,6 +423,11 @@ export const updateVideoGame = async (req, res) => {
         }
 
         if (typeof platform_id === "string" && platform_id.trim().length > 0) {
+
+            if (!mongoose.Types.ObjectId.isValid(platform_id)) {
+                return res.status(400).json({ message: "ID de plataforma no válido" });
+            }
+
             const platform = await Platform.findById(platform_id);
 
             if (!platform) {
@@ -431,6 +442,11 @@ export const updateVideoGame = async (req, res) => {
         }
 
         if (typeof genre_id === "string" && genre_id.trim().length > 0) {
+
+            if (!mongoose.Types.ObjectId.isValid(genre_id)) {
+                return res.status(400).json({ message: "ID de género no válido" });
+            }
+
             const genre = await Genre.findById(genre_id);
 
             if (!genre) {
@@ -495,6 +511,13 @@ export const toggleVideoGameStatus = async (req, res) => {
     const { id } = req.params;
 
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn("ID de videojuego inválido");
+
+            return res.status(400).json({ message: "ID de videojuego no válido." });
+        }
+
         const videoGame = await VideoGame.findById(id);
 
         if (!videoGame) {
