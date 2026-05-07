@@ -301,6 +301,13 @@ export const toggleUserStatus = async (req, res) => {
     const { id } = req.params;
 
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn(`ID de usuario inválido: ${id}`);
+
+            return res.status(400).json({ message: "ID de usuario no válido." });
+        }
+
         const user = await User.findById(id);
 
         if (!user) {
@@ -308,9 +315,7 @@ export const toggleUserStatus = async (req, res) => {
         }
 
         if (req.user._id.toString() === id) {
-            return res.status(400).json({
-                message: "No puedes cambiar tu propio estado."
-            });
+            return res.status(400).json({ message: "No puedes cambiar tu propio estado." });
         }
 
         user.is_active = !user.is_active;
@@ -331,13 +336,9 @@ export const toggleUserStatus = async (req, res) => {
         });
 
     } catch (error) {
-        logger.error("Error en toggle de usuario", {
-            message: error.message
-        });
+        logger.error("Error en toggle de usuario", { message: error.message });
 
-        return res.status(500).json({
-            message: "Error interno del servidor."
-        });
+        return res.status(500).json({ message: "Error interno del servidor." });
     } finally {
         logger.info("Fin de toggle de estado");
     }
@@ -392,13 +393,9 @@ export const getUsers = async (req, res) => {
         });
 
     } catch (error) {
-        logger.error("Error al listar usuarios", {
-            message: error.message
-        });
+        logger.error("Error al listar usuarios", { message: error.message });
 
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        return res.status(500).json({ message: "Error interno del servidor" });
     } finally {
         logger.info("Fin de listado de usuarios");
     }
@@ -411,6 +408,12 @@ export const updateUserByAdmin = async (req, res) => {
     const { name, birth_date, password, role } = req.body;
 
     try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            logger.warn(`ID de usuario inválido: ${userId}`);
+
+            return res.status(400).json({ message: "ID de usuario no válido" });
+        }
+
         const updateData = {};
 
         const user = await User.findById(userId);
@@ -422,9 +425,7 @@ export const updateUserByAdmin = async (req, res) => {
 
         if (req.user._id.toString() === userId) {
             logger.warn(`Intento de auto-modificación del admin: ${userId}`);
-            return res.status(400).json({
-                message: "No puedes modificar tu propio usuario desde esta página"
-            });
+            return res.status(400).json({ message: "No puedes modificar tu propio usuario desde esta página" });
         }
 
         if (typeof name === "string" && name.trim().length >= 2) {
@@ -468,9 +469,7 @@ export const updateUserByAdmin = async (req, res) => {
 
         if (Object.keys(updateData).length === 0) {
             logger.warn("No hay datos para actualizar");
-            return res.status(400).json({
-                message: "No hay datos para actualizar"
-            });
+            return res.status(400).json({ message: "No hay datos para actualizar" });
         }
         const updatedUser = await User.findByIdAndUpdate(
             userId,
@@ -486,9 +485,7 @@ export const updateUserByAdmin = async (req, res) => {
         });
 
     } catch (error) {
-        logger.error("Error en updateUserByAdmin", {
-            message: error.message
-        });
+        logger.error("Error en updateUserByAdmin", { message: error.message });
 
         return res.status(500).json({ message: "Error interno del servidor" });
     } finally {
