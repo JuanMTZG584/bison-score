@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import logger from "../config/logger.js";
 import { env } from "../config/env.js";
 import { deleteImage } from "../lib/cloudinary.helper.js";
+import mongoose from "mongoose";
 
 export const signup = async (req, res) => {
     logger.info("Inicio de proceso de registro");

@@ -1,5 +1,6 @@
 import Genre from "../models/Genre.js";
 import logger from "../config/logger.js";
+import mongoose from "mongoose";
 
 export const getAllGenres = async (req, res) => {
     logger.info("Inicio de listado de géneros");
@@ -141,6 +142,13 @@ export const updateGenre = async (req, res) => {
     const { name, description } = req.body;
 
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn(`ID de género inválido: ${id}`);
+
+            return res.status(400).json({ message: "ID de género no válido" });
+        }
+
         const updateData = {};
 
         const genre = await Genre.findById(id);
@@ -212,6 +220,10 @@ export const toggleGenreStatus = async (req, res) => {
     const { id } = req.params;
 
     try {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "ID de género no válido." });
+        }
+
         const genre = await Genre.findById(id);
 
         if (!genre) {
