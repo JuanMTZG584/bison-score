@@ -1,14 +1,345 @@
 import mongoose from "mongoose";
 import Review from "../models/Review.js";
 import VideoGame from "../models/VideoGame.js";
+import User from "../models/User.js";
+import Rating from "../models/Rating.js"
 import logger from "../config/logger.js";
 
 export const getGameReviews = async (req, res) => {
-    return res.status(200).json("Reseñas de un juego.");
+    logger.info("Inicio de obtención de reseñas/calificaciones del videojuego");
+
+    const { id } = req.params;
+
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn("ID de videojuego inválido");
+
+            return res.status(400).json({ message: "ID de videojuego no válido." });
+        }
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
+
+        const videoGame = await VideoGame.findById(id);
+
+        if (!videoGame) {
+            logger.warn("Videojuego no encontrado");
+
+            return res.status(404).json({ message: "Videojuego no encontrado." });
+        }
+
+        if (!videoGame.is_active) {
+            logger.warn(`Intento de obtener feedback de videojuego inactivo: ${videoGame.title}`);
+
+            return res.status(400).json({ message: "El videojuego está inactivo." });
+        }
+
+        const [reviews, ratings] = await Promise.all([
+            Review.find({
+                video_game_id: id,
+                is_active: true
+            })
+                .populate("user_id", "_id name image_url is_active")
+                .sort({ created_at: -1 }),
+
+            Rating.find({
+                video_game_id: id,
+                is_active: true
+            })
+        ]);
+
+        const feedbackMap = new Map();
+
+        for (const review of reviews) {
+
+            if (!review.user_id || !review.user_id.is_active) {
+                continue;
+            }
+
+            const userId = review.user_id._id.toString();
+
+            feedbackMap.set(userId, {
+                user: {
+                    _id: review.user_id._id,
+                    name: review.user_id.name,
+                    image_url: review.user_id.image_url
+                },
+
+                review: {
+                    _id: review._id,
+                    comment: review.comment,
+                    created_at: review.created_at,
+                    updated_at: review.updated_at
+                },
+
+                rating: null
+            });
+        }
+
+        const userIdsWithoutReview = ratings
+            .filter((rating) => {
+                return !feedbackMap.has(
+                    rating.user_id.toString()
+                );
+            })
+            .map((rating) => rating.user_id);
+
+        const users = await User.find({
+            _id: { $in: userIdsWithoutReview },
+            is_active: true
+        }).select("_id name image_url");
+
+        const usersMap = new Map();
+
+        for (const user of users) {
+            usersMap.set(
+                user._id.toString(),
+                user
+            );
+        }
+
+        for (const rating of ratings) {
+
+            const userId = rating.user_id.toString();
+
+            const existingFeedback =
+                feedbackMap.get(userId);
+
+            if (existingFeedback) {
+
+                existingFeedback.rating = {
+                    _id: rating._id,
+                    score: rating.score,
+                    created_at: rating.created_at,
+                    updated_at: rating.updated_at
+                };
+
+            } else {
+
+                const user = usersMap.get(userId);
+
+                if (!user) {
+                    continue;
+                }
+
+                feedbackMap.set(userId, {
+                    user: {
+                        _id: user._id,
+                        name: user.name,
+                        image_url: user.image_url
+                    },
+
+                    review: null,
+
+                    rating: {
+                        _id: rating._id,
+                        score: rating.score,
+                        created_at: rating.created_at,
+                        updated_at: rating.updated_at
+                    }
+                });
+            }
+        }
+
+        const feedbackArray = Array.from(
+            feedbackMap.values()
+        );
+
+        const total = feedbackArray.length;
+
+        const paginatedFeedback =
+            feedbackArray.slice(
+                skip,
+                skip + limit
+            );
+
+        const totalPages = Math.ceil(
+            total / limit
+        );
+
+        logger.info(`Feedback obtenido: ${paginatedFeedback.length}`);
+
+        return res.status(200).json({
+            success: true,
+            page,
+            totalPages,
+            totalFeedback: total,
+            feedback: paginatedFeedback
+        });
+
+    } catch (error) {
+
+        logger.error("Error al obtener feedback del videojuego", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor." });
+
+    } finally {
+
+        logger.info("Fin de obtención de reseñas/calificaciones del videojuego");
+    }
 };
 
 export const getUserReviews = async (req, res) => {
-    return res.status(200).json("Reseñas de un usuario.");
+    logger.info("Inicio de obtención de feedback del usuario");
+
+    const user_id = req.user._id;
+
+    try {
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
+
+        const [reviews, ratings] = await Promise.all([
+
+            Review.find({
+                user_id,
+                is_active: true
+            })
+                .populate({
+                    path: "video_game_id",
+                    match: { is_active: true },
+                    select: "_id title image_url"
+                })
+                .sort({ created_at: -1 }),
+
+            Rating.find({
+                user_id,
+                is_active: true
+            })
+                .populate({
+                    path: "video_game_id",
+                    match: { is_active: true },
+                    select: "_id title image_url"
+                })
+        ]);
+
+        const feedbackMap = new Map();
+
+        for (const review of reviews) {
+
+            if (!review.video_game_id) {
+                continue;
+            }
+
+            const videoGameId =
+                review.video_game_id._id.toString();
+
+            feedbackMap.set(videoGameId, {
+
+                video_game: {
+                    _id: review.video_game_id._id,
+                    title: review.video_game_id.title,
+                    image_url: review.video_game_id.image_url
+                },
+
+                review: {
+                    _id: review._id,
+                    comment: review.comment,
+                    created_at: review.created_at,
+                    updated_at: review.updated_at
+                },
+
+                rating: null
+            });
+        }
+
+        for (const rating of ratings) {
+
+            if (!rating.video_game_id) {
+                continue;
+            }
+
+            const videoGameId =
+                rating.video_game_id._id.toString();
+
+            const existingFeedback =
+                feedbackMap.get(videoGameId);
+
+            if (existingFeedback) {
+
+                existingFeedback.rating = {
+                    _id: rating._id,
+                    score: rating.score,
+                    created_at: rating.created_at,
+                    updated_at: rating.updated_at
+                };
+
+            } else {
+
+                feedbackMap.set(videoGameId, {
+
+                    video_game: {
+                        _id: rating.video_game_id._id,
+                        title: rating.video_game_id.title,
+                        image_url: rating.video_game_id.image_url
+                    },
+
+                    review: null,
+
+                    rating: {
+                        _id: rating._id,
+                        score: rating.score,
+                        created_at: rating.created_at,
+                        updated_at: rating.updated_at
+                    }
+                });
+            }
+        }
+
+        const feedbackArray = Array.from(
+            feedbackMap.values()
+        );
+
+        feedbackArray.sort((a, b) => {
+
+            const dateA =
+                a.review?.created_at ||
+                a.rating?.created_at;
+
+            const dateB =
+                b.review?.created_at ||
+                b.rating?.created_at;
+
+            return new Date(dateB) - new Date(dateA);
+        });
+
+        const total = feedbackArray.length;
+
+        const paginatedFeedback =
+            feedbackArray.slice(
+                skip,
+                skip + limit
+            );
+
+        const totalPages = Math.ceil(
+            total / limit
+        );
+
+        logger.info(`Feedback obtenido: ${paginatedFeedback.length}`);
+
+        return res.status(200).json({
+            success: true,
+            page,
+            totalPages,
+            totalFeedback: total,
+            feedback: paginatedFeedback
+        });
+
+    } catch (error) {
+
+        logger.error("Error al obtener feedback del usuario", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor." });
+
+    } finally {
+
+        logger.info("Fin de obtención de feedback del usuario");
+    }
 };
 
 export const createReview = async (req, res) => {
