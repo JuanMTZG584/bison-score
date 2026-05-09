@@ -1,75 +1,495 @@
 import { generateToken } from "../lib/utils.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import logger from "../config/logger.js";
+import { env } from "../config/env.js";
+import { deleteImage } from "../lib/cloudinary.helper.js";
+import mongoose from "mongoose";
 
 export const signup = async (req, res) => {
-    const { name, email, password, image_url, birth_date } = req.body;
+    logger.info("Inicio de proceso de registro");
 
-    try {
-        if (!name || !email || !password || !birth_date) {
-            return res.status(400).json({ message: "Debes de completar todos los campos." });
-        }
-        if (password.length < 6) {
-            return res.status(400).json({ message: "La contraseña debe contener al menos 6 caracteres." });
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ message: "Formato de correo no válido." });
-        }
+    const { name, email, password, birth_date } = req.body;
 
-        const birthDateObj = new Date(birth_date);
-        if (isNaN(birthDateObj.getTime())) {
-            return res.status(400).json({ message: "Fecha de nacimiento no válida." });
-        }
-
-        const today = new Date();
-        let age = today.getFullYear() - birthDateObj.getFullYear();
-        const monthDiff = today.getMonth() - birthDateObj.getMonth();
-
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
-            age--;
-        }
-
-        const MIN_AGE = 13;
-        if (age < MIN_AGE) {
-            return res.status(403).json({
-                message: `Debes tener al menos ${MIN_AGE} años para registrarte.`,
-            });
-        }
-
-        const user = await User.findOne({ email });
-        if (user) return res.status(400).json({ message: "Este correo ya fue registrado." });
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const newUser = new User({
-            name,
-            email,
-            password: hashedPassword,
-            image_url,
-            birth_date,
-        });
-
-        if (newUser) {
-            const savedUser = await newUser.save();
-            generateToken(savedUser._id, res);
-
-            res.status(201).json({
-                _id: savedUser._id,
-                name: savedUser.name,
-                email: savedUser.email,
-                image_url: savedUser.image_url,
-                birth_date: savedUser.birth_date,
-                role: savedUser.role
-            });
-        } else {
-            res.status(400).json({ message: "Información de usuario inválida." });
-        }
-
-    } catch (error) {
-        console.log("Error al registrar usuario:", error);
-        res.status(500).json({ message: "Error interno del servidor." });
+    if (!name || !email || !password || !birth_date) {
+        logger.warn("Campos incompletos en registro");
+        return res.status(400).json({ message: "Debes de completar todos los campos." });
     }
 
-}
+    const normalizedEmail = email?.toLowerCase().trim();
+
+    if (!normalizedEmail) {
+        logger.warn("Email inválido");
+        return res.status(400).json({ message: "Formato de correo no válido." });
+    }
+
+    if (password.length < 6) {
+        logger.warn("Contraseña demasiado corta");
+        return res.status(400).json({ message: "La contraseña debe contener al menos 6 caracteres." });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+        logger.warn("Formato de correo inválido");
+        return res.status(400).json({ message: "Formato de correo no válido." });
+    }
+
+    const birthDateObj = new Date(birth_date);
+    if (isNaN(birthDateObj.getTime())) {
+        logger.warn("Fecha de nacimiento inválida");
+        return res.status(400).json({ message: "Fecha de nacimiento no válida." });
+    }
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDateObj.getFullYear();
+    const monthDiff = today.getMonth() - birthDateObj.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+        age--;
+    }
+
+    if (age < 13) {
+        logger.warn(`Usuario menor de edad: ${normalizedEmail}`);
+        return res.status(403).json({ message: "Debes tener al menos 13 años." });
+    }
+
+    try {
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const userData = {
+            name,
+            email: normalizedEmail,
+            password: hashedPassword,
+            birth_date: birthDateObj
+        };
+
+        // if (image_url?.trim()) {
+        //     userData.image_url = image_url;
+        // }
+
+        const savedUser = await User.create(userData);
+
+        generateToken(savedUser._id, res);
+
+        logger.info(`Usuario registrado correctamente: ${normalizedEmail}`);
+
+        return res.status(201).json({
+            _id: savedUser._id,
+            name: savedUser.name,
+            email: savedUser.email,
+            image_url: savedUser.image_url,
+            birth_date: savedUser.birth_date,
+            role: savedUser.role
+        });
+
+    } catch (error) {
+        if (error.code === 11000) {
+            logger.warn(`Email duplicado (DB): ${normalizedEmail}`);
+            return res.status(400).json({ message: "Este correo ya fue registrado." });
+        }
+
+        logger.error("Error en registro", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor." });
+    } finally {
+        logger.info("Fin de proceso de registro");
+    }
+};
+
+export const login = async (req, res) => {
+    logger.info("Inicio de proceso de login");
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        logger.warn("Login fallido: campos incompletos");
+        return res.status(400).json({ message: "Todos los campos se deben rellenar" });
+    }
+
+    const normalizedEmail = email?.toLowerCase().trim();
+
+    if (!normalizedEmail) {
+        logger.warn("Login fallido: email inválido");
+        return res.status(400).json({ message: "Credenciales inválidas" });
+    }
+
+    try {
+        const user = await User.findOne({ email: normalizedEmail }).select("+password");
+
+        if (!user) {
+            logger.warn(`Login fallido: usuario no encontrado (${normalizedEmail})`);
+            return res.status(400).json({ message: "Credenciales inválidas" });
+        }
+
+        const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordCorrect) {
+            logger.warn(`Login fallido: contraseña incorrecta (${normalizedEmail})`);
+            return res.status(400).json({ message: "Credenciales inválidas" });
+        }
+
+        if (!user.is_active) {
+            logger.warn(`Login bloqueado: usuario inactivo (${normalizedEmail})`);
+            return res.status(403).json({ message: "Credenciales inválidas" });
+        }
+
+        generateToken(user._id, res);
+
+        logger.info(`Login exitoso: ${user.email}`);
+
+        return res.status(200).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            image_url: user.image_url,
+            birth_date: user.birth_date,
+            role: user.role
+        });
+
+    } catch (error) {
+        logger.error("Error en controlador de login", {
+            message: error.message
+        });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de proceso de login");
+    }
+};
+
+export const logout = (_, res) => {
+    logger.info("Inicio de logout");
+
+    res.clearCookie("jwt", {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: env.NODE_ENV !== "development"
+    });
+
+    logger.info("Logout exitoso");
+
+    res.status(200).json({ message: "Cierre de sesión exitoso" });
+};
+
+export const getMe = (req, res) => {
+    return res.status(200).json({
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        image_url: req.user.image_url,
+        birth_date: req.user.birth_date,
+        role: req.user.role
+    });
+};
+
+export const updateProfile = async (req, res) => {
+    logger.info("Inicio de actualización de perfil");
+
+    const userId = req.user._id;
+    const { name, birth_date, password, currentPassword, image_url } = req.body;
+
+    try {
+        const updateData = {};
+
+        const user = await User.findById(userId).select("+password");
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        if (typeof name === "string" && name.trim().length > 0) {
+            if (typeof name !== "string" || name.trim().length < 2) {
+                return res.status(400).json({ message: "Nombre inválido" });
+            }
+            updateData.name = name.trim();
+        }
+
+        if (typeof birth_date === "string" && birth_date.trim().length > 0) {
+            const birthDateObj = new Date(birth_date);
+
+            if (isNaN(birthDateObj.getTime())) {
+                return res.status(400).json({ message: "Fecha no válida" });
+            }
+
+            const today = new Date();
+            let age = today.getFullYear() - birthDateObj.getFullYear();
+            const monthDiff = today.getMonth() - birthDateObj.getMonth();
+
+            if (
+                monthDiff < 0 ||
+                (monthDiff === 0 && today.getDate() < birthDateObj.getDate())
+            ) {
+                age--;
+            }
+
+            if (age < 13) {
+                return res.status(403).json({ message: "Debes tener al menos 13 años." });
+            }
+
+            updateData.birth_date = birthDateObj;
+        }
+
+        if (typeof password === "string" && password.length > 0) {
+            if (!currentPassword) {
+                return res.status(400).json({
+                    message: "Debes proporcionar la contraseña actual"
+                });
+            }
+
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+            if (!isMatch) {
+                return res.status(400).json({
+                    message: "Contraseña actual incorrecta"
+                });
+            }
+
+            if (typeof password !== "string" || password.length < 6) {
+                return res.status(400).json({
+                    message: "La nueva contraseña debe tener al menos 6 caracteres"
+                });
+            }
+
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+        if (typeof image_url === "string" && image_url.trim() !== "") {
+            if (user.image_url) {
+                try {
+                    await deleteImage(user.image_url);
+                } catch (err) {
+                    logger.warn("No se pudo borrar imagen anterior", {
+                        message: err.message
+                    });
+                }
+            }
+
+            updateData.image_url = image_url.trim();
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: "No hay datos para actualizar" });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { returnDocument: "after", runValidators: true }
+        ).select("-password");
+
+        logger.info(`Perfil actualizado: ${updatedUser.email}`);
+
+        return res.status(200).json({
+            success: true,
+            user: updatedUser
+        });
+
+    } catch (error) {
+        logger.error("Error al actualizar perfil", {
+            message: error.message
+        });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de actualización de perfil");
+    }
+};
+
+export const toggleUserStatus = async (req, res) => {
+    logger.info("Inicio de toggle de estado de usuario");
+
+    const { id } = req.params;
+
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            logger.warn(`ID de usuario inválido: ${id}`);
+
+            return res.status(400).json({ message: "ID de usuario no válido." });
+        }
+
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado." });
+        }
+
+        if (req.user._id.toString() === id) {
+            return res.status(400).json({ message: "No puedes cambiar tu propio estado." });
+        }
+
+        user.is_active = !user.is_active;
+        await user.save();
+
+        logger.info(`Estado cambiado: ${user.email} → ${user.is_active}`);
+
+        return res.status(200).json({
+            success: true,
+            message: user.is_active
+                ? "Usuario activado."
+                : "Usuario desactivado.",
+            user: {
+                _id: user._id,
+                email: user.email,
+                is_active: user.is_active
+            }
+        });
+
+    } catch (error) {
+        logger.error("Error en toggle de usuario", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor." });
+    } finally {
+        logger.info("Fin de toggle de estado");
+    }
+};
+
+export const getUsers = async (req, res) => {
+    logger.info("Inicio de listado de usuarios");
+
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const is_active = req.query.is_active;
+        const search = req.query.search;
+
+        const skip = (page - 1) * limit;
+
+        const filter = {
+            role: "USER"
+        };
+
+        if (is_active !== undefined) {
+            filter.is_active = is_active === "true";
+        }
+
+        if (search && search.trim().length > 0) {
+            const regex = new RegExp(search.trim(), "i");
+
+            filter.$or = [
+                { name: regex },
+                { email: regex }
+            ];
+        }
+
+        const [users, total] = await Promise.all([
+            User.find(filter)
+                .select("-password")
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            User.countDocuments(filter)
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            success: true,
+            page,
+            totalPages,
+            totalUsers: total,
+            users
+        });
+
+    } catch (error) {
+        logger.error("Error al listar usuarios", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de listado de usuarios");
+    }
+};
+
+export const updateUserByAdmin = async (req, res) => {
+    logger.info("Admin actualizando usuario");
+
+    const userId = req.params.id;
+    const { name, birth_date, password, role } = req.body;
+
+    try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            logger.warn(`ID de usuario inválido: ${userId}`);
+
+            return res.status(400).json({ message: "ID de usuario no válido" });
+        }
+
+        const updateData = {};
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            logger.warn(`Usuario no encontrado: ${userId}`);
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        if (req.user._id.toString() === userId) {
+            logger.warn(`Intento de auto-modificación del admin: ${userId}`);
+            return res.status(400).json({ message: "No puedes modificar tu propio usuario desde esta página" });
+        }
+
+        if (typeof name === "string" && name.trim().length >= 2) {
+            updateData.name = name.trim();
+            logger.info("Nombre actualizado");
+        }
+
+        if (birth_date) {
+            const birthDateObj = new Date(birth_date);
+
+            if (isNaN(birthDateObj.getTime())) return;
+
+            const today = new Date();
+            let age = today.getFullYear() - birthDateObj.getFullYear();
+
+            const monthDiff = today.getMonth() - birthDateObj.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+                age--;
+            }
+
+            if (age < 13) {
+                logger.warn("Fecha de nacimiento inválida");
+                return res.status(400).json({ message: "Edad mínima 13 años" });
+            }
+
+            updateData.birth_date = birthDateObj;
+            logger.info("Fecha de nacimiento actualizada");
+        }
+
+        if (typeof password === "string" && password.length >= 6) {
+            updateData.password = await bcrypt.hash(password, 10);
+            logger.info("Contraseña actualizada");
+        }
+
+        if (role === "USER" || role === "ADMIN") {
+            updateData.role = role;
+            logger.info(`Rol actualizado: ${role}`);
+        }
+
+
+        if (Object.keys(updateData).length === 0) {
+            logger.warn("No hay datos para actualizar");
+            return res.status(400).json({ message: "No hay datos para actualizar" });
+        }
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { returnDocument: "after", runValidators: true }
+        ).select("-password");
+
+        logger.info(`Usuario actualizado correctamente: ${updatedUser.email}`);
+
+        return res.status(200).json({
+            success: true,
+            user: updatedUser
+        });
+
+    } catch (error) {
+        logger.error("Error en updateUserByAdmin", { message: error.message });
+
+        return res.status(500).json({ message: "Error interno del servidor" });
+    } finally {
+        logger.info("Fin de actualización de perfil por Admin");
+    }
+};

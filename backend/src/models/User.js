@@ -13,18 +13,22 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       lowercase: true,
-      trim: true
+      trim: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Formato de correo no válido"]
     },
 
     password: {
       type: String,
       required: true,
-      minlength: 6
+      minlength: 6,
+      select: false
     },
 
     image_url: {
       type: String,
-      default: ""
+      default: function () {
+        return `https://api.dicebear.com/7.x/initials/svg?seed=${this.name}`;
+      }
     },
 
     role: {
@@ -34,7 +38,8 @@ const userSchema = new mongoose.Schema(
     },
 
     birth_date: {
-      type: Date
+      type: Date,
+      required: true
     },
 
     is_active: {
