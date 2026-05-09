@@ -6,10 +6,10 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 const router = express.Router();
 
 //CREATE OR UPDATE Rating (protectRoute) 
-router.post("/", upsertRating);
+router.post("/", protectRoute, upsertRating);
 
 //DELETE Rating (protectRoute)
-router.patch("/:id/toggle", deleteRating);
+router.patch("/:id/toggle", protectRoute, deleteRating);
 
 
 export default router;
