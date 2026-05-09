@@ -5,10 +5,10 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 
 const router = express.Router();
 
-//READ Game Reviews (protectRoute?)
+//READ Game Reviews & Ratings (protectRoute?)
 router.get("/video-game/:id", getGameReviews);
 
-//READ User Reviews (protectRoute)
+//READ User Reviews & Ratings  (protectRoute)
 router.get("/user/:id", getUserReviews);
 
 //CREATE Review (protectRoute)
