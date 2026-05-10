@@ -210,6 +210,7 @@ ____________________________________________________________________
 ____________________________________________________________________
 
 **POST /api/videogames/** // Crear videojuego por Admin
+***Nota: Para insertar la imagen usar primero el endpoint POST /api/auth/upload para subir la foto y obtener la url, con esa url rellenar el campo image_url.***
 JSON:
 {
   "title": "Elden Ring",
@@ -223,6 +224,7 @@ JSON:
 ____________________________________________________________________
 
 **PUT /api/videogames/:id** // Actualizar videojuego por Admin
+***Nota: Para insertar la imagen usar primero el endpoint POST /api/auth/upload para subir la foto y obtener la url, con esa url rellenar el campo image_url.***
 JSON:
 {
   "title": "Elden Ring Deluxe",
