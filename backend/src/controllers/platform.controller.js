@@ -1,5 +1,7 @@
 import Platform from "../models/Platform.js";
+import VideoGame from "../models/VideoGame.js";
 import logger from "../config/logger.js";
+import mongoose from "mongoose";
 
 export const getAllPlatforms = async (req, res) => {
     logger.info("Inicio de listado de plataformas");
@@ -168,10 +170,10 @@ export const updatePlatform = async (req, res) => {
             return res.status(404).json({ message: "Plataforma no encontrada" });
         }
 
-        if (!platform.is_active) {
-            logger.warn(`Intento de actualizar plataforma inactiva: ${id}`);
-            return res.status(403).json({ message: "No se puede actualizar una plataforma inactiva" });
-        }
+        // if (!platform.is_active) {
+        //     logger.warn(`Intento de actualizar plataforma inactiva: ${id}`);
+        //     return res.status(403).json({ message: "No se puede actualizar una plataforma inactiva" });
+        // }
 
         if (typeof name === "string" && name.trim().length > 0) {
             const trimmedName = name.trim();
@@ -246,7 +248,6 @@ export const togglePlatformStatus = async (req, res) => {
     const { id } = req.params;
 
     try {
-
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: "ID de plataforma no válido." });
         }
@@ -257,8 +258,16 @@ export const togglePlatformStatus = async (req, res) => {
             return res.status(404).json({ message: "Plataforma no encontrada." });
         }
 
-        platform.is_active = !platform.is_active;
+        const newStatus = !platform.is_active;
+        platform.is_active = newStatus;
+
         await platform.save();
+
+        if (!newStatus) {
+            await VideoGame.updateMany({ platform_id: id }, { is_active: false });
+
+            logger.info(`Videojuegos desactivados por plataforma: ${platform.name}`);
+        }
 
         logger.info(`Estado cambiado: ${platform.name} → ${platform.is_active}`);
 
@@ -266,7 +275,7 @@ export const togglePlatformStatus = async (req, res) => {
             success: true,
             message: platform.is_active
                 ? "Plataforma activada."
-                : "Plataforma desactivada.",
+                : "Plataforma desactivada (videojuegos desactivados).",
             platform: {
                 _id: platform._id,
                 name: platform.name,

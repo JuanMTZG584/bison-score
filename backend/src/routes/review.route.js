@@ -6,18 +6,18 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 const router = express.Router();
 
 //READ Game Reviews & Ratings (protectRoute?)
-router.get("/video-game/:id", getGameReviews);
+router.get("/video-game/:id", protectRoute, getGameReviews);
 
 //READ User Reviews & Ratings  (protectRoute)
-router.get("/user/:id", getUserReviews);
+router.get("/user", protectRoute, getUserReviews);
 
 //CREATE Review (protectRoute)
-router.post("/", createReview);
+router.post("/", protectRoute, createReview);
 
 //UPDATE Review (protectRoute)
-router.patch("/:id", updateReview);
+router.patch("/:id", protectRoute, updateReview);
 
 //PATCH Platform (protectRoute)
-router.patch("/:id/toggle", deleteReview);
+router.patch("/:id/toggle", protectRoute, deleteReview);
 
 export default router;
