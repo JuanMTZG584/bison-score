@@ -1,4 +1,5 @@
 import Genre from "../models/Genre.js";
+import VideoGame from "../models/VideoGame.js";
 import logger from "../config/logger.js";
 import mongoose from "mongoose";
 
@@ -158,10 +159,10 @@ export const updateGenre = async (req, res) => {
             return res.status(404).json({ message: "Género no encontrado" });
         }
 
-        if (!genre.is_active) {
-            logger.warn(`Intento de actualizar género inactivo: ${id}`);
-            return res.status(403).json({ message: "No se puede actualizar un género inactivo" });
-        }
+        // if (!genre.is_active) {
+        //     logger.warn(`Intento de actualizar género inactivo: ${id}`);
+        //     return res.status(403).json({ message: "No se puede actualizar un género inactivo" });
+        // }
 
         if (typeof name === "string" && name.trim().length > 0) {
             const trimmedName = name.trim();
@@ -220,7 +221,7 @@ export const toggleGenreStatus = async (req, res) => {
     const { id } = req.params;
 
     try {
-        
+
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: "ID de género no válido." });
         }
@@ -231,8 +232,19 @@ export const toggleGenreStatus = async (req, res) => {
             return res.status(404).json({ message: "Género no encontrado." });
         }
 
-        genre.is_active = !genre.is_active;
+        const newStatus = !genre.is_active;
+        genre.is_active = newStatus;
+
         await genre.save();
+
+        if (!newStatus) {
+            await VideoGame.updateMany(
+                { genre_id: id },
+                { is_active: false }
+            );
+
+            logger.info(`Videojuegos desactivados por género: ${genre.name}`);
+        }
 
         logger.info(`Estado cambiado: ${genre.name} → ${genre.is_active}`);
 
@@ -240,7 +252,7 @@ export const toggleGenreStatus = async (req, res) => {
             success: true,
             message: genre.is_active
                 ? "Género activado."
-                : "Género desactivado.",
+                : "Género desactivado (videojuegos desactivados).",
             genre: {
                 _id: genre._id,
                 name: genre.name,
