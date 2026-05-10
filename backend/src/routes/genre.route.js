@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/", protectRoute, requireAdmin, getAllGenres);
 
 //READ Genres for Users
-router.get("/options", getGenreOptions);
+router.get("/options", protectRoute, getGenreOptions);
 
 //CREATE Genres (Admin) (protectRoute, requireAdmin)
 router.post("/", protectRoute, requireAdmin, createGenre);

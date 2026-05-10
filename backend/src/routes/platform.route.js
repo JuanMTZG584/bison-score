@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/", protectRoute, requireAdmin, getAllPlatforms);
 
 //READ Platforms for Users
-router.get("/options", getPlatformOptions);
+router.get("/options", protectRoute, getPlatformOptions);
 
 //CREATE Plafrom (Admin) (protectRoute, requireAdmin)
 router.post("/", protectRoute, requireAdmin, createPlatform);
