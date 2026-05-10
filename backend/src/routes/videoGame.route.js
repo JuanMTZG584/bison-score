@@ -6,22 +6,22 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 const router = express.Router();
 
 //READ Videogames for Admins EJ: GET /api/videogames/?page=1&limit=5&search=halo&is_active=true&platform_id=681a72c4f0d9f1c8a5e3b123
-// (protectRoute, requiereAdmin)
-router.get("/", getAllVideoGames);
+// (protectRoute, requireAdmin)
+router.get("/", protectRoute, requireAdmin, getAllVideoGames);
 
 //READ Videogames list for users EJ: GET /api/videogames/options?search=halo&platform_id=[...]&genre_id=[...]&page=1&limit=10
-router.get("/options", getVideoGameOptions);
+router.get("/options", protectRoute, getVideoGameOptions);
 
 //READ Videogames details for users
-router.get("/:id", getVideoGameDetails);
+router.get("/:id", protectRoute, getVideoGameDetails);
 
 //CREATE Videgame (Admin) (protectRoute, requireAdmin)
-router.post("/", createVideoGame);
+router.post("/", protectRoute, requireAdmin, createVideoGame);
 
 //UPDATE Videogame (Admin) (protectRoute, requireAdmin)
-router.put("/:id", updateVideoGame);
+router.put("/:id", protectRoute, requireAdmin, updateVideoGame);
 
 //PATCH Videogame (Admin) (protectRoute, requireAdmin)
-router.patch("/:id/toggle", toggleVideoGameStatus);
+router.patch("/:id/toggle", protectRoute, requireAdmin, toggleVideoGameStatus);
 
 export default router;
