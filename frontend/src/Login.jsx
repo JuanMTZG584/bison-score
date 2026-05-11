@@ -4,6 +4,7 @@ import {
 } from "@mui/material";
 import Navbar from "./Navbar";
 import { labelSx, bgSx } from "./theme";
+import { login as apiLogin } from "./api/users";
 
 export default function Login({ onNavigate, onLogin, user, onLogout }) {
   const [email,    setEmail]    = useState("");
@@ -16,14 +17,8 @@ export default function Login({ onNavigate, onLogin, user, onLogout }) {
     if (!email || !password) { setError("Completa todos los campos."); return; }
     setLoading(true);
     try {
-      const res  = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Error al iniciar sesión");
-      onLogin({ name: data.name || email });
+      const data = await apiLogin(email, password);
+      onLogin(data);          // data = { _id, name, email, image_url, birth_date, role }
       onNavigate("home");
     } catch (e) {
       setError(e.message);
@@ -34,10 +29,8 @@ export default function Login({ onNavigate, onLogin, user, onLogout }) {
 
   return (
     <Box sx={{ minHeight: "100vh", position: "relative" }}>
-      {/* Fondo difuminado */}
       <Box sx={bgSx} />
 
-      {/* Contenido */}
       <Box sx={{ position: "relative", zIndex: 1 }}>
         <Navbar onNavigate={onNavigate} user={user} onLogout={onLogout} />
         <Box sx={{ minHeight: "calc(100vh - 64px)", display: "flex",

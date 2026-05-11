@@ -6,6 +6,7 @@ import EditIcon      from "@mui/icons-material/Edit";
 import LandscapeIcon from "@mui/icons-material/Landscape";
 import Navbar from "./Navbar";
 import { labelSx, bgSx } from "./theme";
+import { signup as apiSignup } from "./api/users";
 
 export default function Register({ onNavigate, user, onLogout }) {
   const [form,    setForm]    = useState({ name: "", password: "", email: "", birth_date: "" });
@@ -21,13 +22,7 @@ export default function Register({ onNavigate, user, onLogout }) {
     }
     setLoading(true);
     try {
-      const res  = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Error al registrarse");
+      await apiSignup(form);
       alert("¡Cuenta creada exitosamente!");
       onNavigate("login");
     } catch (e) {
@@ -39,10 +34,8 @@ export default function Register({ onNavigate, user, onLogout }) {
 
   return (
     <Box sx={{ minHeight: "100vh", position: "relative" }}>
-      {/* Fondo difuminado */}
       <Box sx={bgSx} />
 
-      {/* Contenido */}
       <Box sx={{ position: "relative", zIndex: 1 }}>
         <Navbar onNavigate={onNavigate} user={user} onLogout={onLogout} />
         <Box sx={{ minHeight: "calc(100vh - 64px)", display: "flex",
@@ -53,22 +46,6 @@ export default function Register({ onNavigate, user, onLogout }) {
             width: "100%", maxWidth: 500,
           }}>
             <Box sx={{ display: "flex", gap: 3, mb: 0.5 }}>
-              <Box sx={{ position: "relative", flexShrink: 0 }}>
-                <Avatar sx={{
-                  width: 100, height: 100, borderRadius: 3, cursor: "pointer",
-                  background: "linear-gradient(135deg, #a8d8a8 0%, #7ec8a0 50%, #4da06a 100%)",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                }}>
-                  <LandscapeIcon sx={{ fontSize: 44, color: "#2c5f2e" }} />
-                </Avatar>
-                <Avatar sx={{
-                  width: 24, height: 24, position: "absolute", bottom: -6, right: -6,
-                  bgcolor: "#fff", border: "1.5px solid #b0b8c1", cursor: "pointer",
-                }}>
-                  <EditIcon sx={{ fontSize: 14, color: "#444" }} />
-                </Avatar>
-              </Box>
-
               <Box sx={{ flex: 1 }}>
                 <Typography sx={{
                   fontFamily: "'Barlow Condensed', sans-serif",
