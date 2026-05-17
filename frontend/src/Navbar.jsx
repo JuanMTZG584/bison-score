@@ -13,7 +13,14 @@ import LogoutIcon        from "@mui/icons-material/Logout";
 import AssessmentIcon    from "@mui/icons-material/Assessment";
 import BuildIcon         from "@mui/icons-material/Build";
 
-export default function Navbar({ searchValue, onSearchChange, onNavigate, user, onLogout }) {
+export default function Navbar({
+  searchValue,
+  onSearchChange,
+  onSearchSubmit, // <-- agregar esto
+  onNavigate,
+  user,
+  onLogout
+}) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   return (
@@ -39,6 +46,7 @@ export default function Navbar({ searchValue, onSearchChange, onNavigate, user, 
             placeholder="Buscar juego"
             value={searchValue ?? ""}
             onChange={onSearchChange}
+            onKeyDown={(e) => e.key === "Enter" && onSearchSubmit?.()}
             disabled={!onSearchChange}
             sx={{
               color: "white", width: 190, opacity: onSearchChange ? 1 : 0.6,
@@ -46,7 +54,15 @@ export default function Navbar({ searchValue, onSearchChange, onNavigate, user, 
             }}
           />
         </Box>
-        <IconButton sx={{ bgcolor: "secondary.main", "&:hover": { bgcolor: "#219150" }, borderRadius: 1.5 }}>
+
+        <IconButton
+          onClick={() => onSearchSubmit?.()}
+          sx={{
+            bgcolor: "secondary.main",
+            "&:hover": { bgcolor: "#219150" },
+            borderRadius: 1.5
+          }}
+        >
           <SearchIcon sx={{ color: "#fff" }} />
         </IconButton>
 
@@ -57,6 +73,7 @@ export default function Navbar({ searchValue, onSearchChange, onNavigate, user, 
             <ArrowDropDownIcon fontSize="small" />
           </IconButton>
         </Tooltip>
+
         <Menu
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
@@ -70,6 +87,7 @@ export default function Navbar({ searchValue, onSearchChange, onNavigate, user, 
               <ListItemIcon><LoginIcon fontSize="small" /></ListItemIcon>
               Iniciar sesión
             </MenuItem>,
+
             <MenuItem key="register" onClick={() => { setAnchorEl(null); onNavigate("register"); }}>
               <ListItemIcon><PersonAddIcon fontSize="small" /></ListItemIcon>
               Registrarse
@@ -79,8 +97,14 @@ export default function Navbar({ searchValue, onSearchChange, onNavigate, user, 
               <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
               Mi Cuenta
             </MenuItem>,
+
             <Divider key="div" />,
-            <MenuItem key="logout" onClick={() => { setAnchorEl(null); onLogout(); }} sx={{ color: "error.main" }}>
+
+            <MenuItem
+              key="logout"
+              onClick={() => { setAnchorEl(null); onLogout(); }}
+              sx={{ color: "error.main" }}
+            >
               <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>
               Cerrar Sesión
             </MenuItem>,
