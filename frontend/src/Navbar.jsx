@@ -26,13 +26,30 @@ export default function Navbar({
   return (
     <AppBar position="sticky" color="primary" elevation={3}>
       <Toolbar sx={{ gap: 1 }}>
-        <Typography
-          variant="h6"
+        <Box
           onClick={() => onNavigate("home")}
-          sx={{ display: "flex", alignItems: "center", gap: 0.8, cursor: "pointer", userSelect: "none" }}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            cursor: "pointer",
+            userSelect: "none",
+          }}
         >
-          🦬 BisonScore
-        </Typography>
+          <Box
+            component="img"
+            src="/images/bisonte.png"
+            alt="BisonSCORE"
+            sx={{
+              width: 56,
+              objectFit: "contain",
+            }}
+          />
+
+          <Typography variant="h6">
+            BisonSCORE
+          </Typography>
+        </Box>
 
         <Box sx={{ flexGrow: 1 }} />
 
@@ -119,11 +136,13 @@ export default function Navbar({
         </Tooltip>
 
         {/* Admin */}
-        <Tooltip title="Administrador">
-          <IconButton onClick={() => onNavigate("admin")} sx={{ color: "white" }}>
-            <BuildIcon />
-          </IconButton>
-        </Tooltip>
+        {user?.role === "ADMIN" && (
+          <Tooltip title="Administrador">
+            <IconButton onClick={() => onNavigate("admin")} sx={{ color: "white" }}>
+              <BuildIcon />
+            </IconButton>
+          </Tooltip>
+        )}
       </Toolbar>
     </AppBar>
   );

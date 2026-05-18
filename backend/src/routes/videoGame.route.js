@@ -10,10 +10,10 @@ const router = express.Router();
 router.get("/", protectRoute, requireAdmin, getAllVideoGames);
 
 //READ Videogames list for users EJ: GET /api/videogames/options?search=halo&platform_id=[...]&genre_id=[...]&page=1&limit=10
-router.get("/options", protectRoute, getVideoGameOptions);
+router.get("/options", getVideoGameOptions);
 
 //READ Videogames details for users
-router.get("/:id", protectRoute, getVideoGameDetails);
+router.get("/:id", getVideoGameDetails);
 
 //CREATE Videgame (Admin) (protectRoute, requireAdmin)
 router.post("/", protectRoute, requireAdmin, createVideoGame);

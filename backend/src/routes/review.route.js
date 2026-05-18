@@ -6,7 +6,7 @@ import { requireAdmin } from "../middleware/requireAdmin.middleware.js";
 const router = express.Router();
 
 //READ Game Reviews & Ratings (protectRoute?)
-router.get("/video-game/:id", protectRoute, getGameReviews);
+router.get("/video-game/:id", getGameReviews);
 
 //READ User Reviews & Ratings  (protectRoute)
 router.get("/user", protectRoute, getUserReviews);

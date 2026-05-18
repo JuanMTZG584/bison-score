@@ -9,6 +9,7 @@ import Navbar from "./Navbar";
 import { labelSx, bgSx, scoreColor } from "./theme";
 import { updateProfile, uploadImage } from "./api/users";
 import { getUserReviews } from "./api/reviews";
+import { validateUserUpdate } from "./utils/authValidations";
 
 export default function MyAccount({ onNavigate, user, onLogout, onUserUpdate }) {
   const [form, setForm] = useState({
@@ -64,7 +65,20 @@ export default function MyAccount({ onNavigate, user, onLogout, onUserUpdate }) 
   const handleSave = async () => {
     setError("");
     setSuccess("");
+
+    const errors = validateUserUpdate({
+      name: form.name,
+      password: form.password,
+      birth_date: form.birth_date,
+    });
+
+    if (Object.keys(errors).length > 0) {
+      setError(Object.values(errors)[0]);
+      return;
+    }
+
     setLoading(true);
+    
     try {
       const payload = {};
 

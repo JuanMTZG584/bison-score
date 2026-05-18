@@ -112,41 +112,59 @@ export default function GameDetail({ game: gameFromList, onNavigate, user, onLog
     setModalOpen(true);
   };
 
-  const handleSend = async () => {
-    setModalLoad(true);
-    setModalErr("");
-    try {
-      // Rating: siempre upsert (crea o actualiza)
-      await upsertRating(gameId, score);
+const handleSend = async () => {
+  setModalLoad(true);
+  setModalErr("");
 
-      // Review
-      if (modalMode === "create") {
-        if (comment.trim()) await createReview({ video_game_id: gameId, comment: comment.trim() });
+  try {
+    // rating
+    await upsertRating(gameId, score);
+
+    // review
+    if (comment.trim()) {
+      if (myReview) {
+        await updateReview(myReview._id, comment.trim());
       } else {
-        if (myReview && comment.trim()) await updateReview(myReview._id, comment.trim());
+        await createReview({
+          video_game_id: gameId,
+          comment: comment.trim(),
+        });
       }
-
-      setModalOpen(false);
-      // Recargar datos
-      fetchFeedback();
-      // Recargar juego para rating_average actualizado
-      const res  = await fetch(`/api/videogames/${gameId}`, { credentials: "include" });
-      const d    = await res.json();
-      if (d.videoGame) setGame(d.videoGame);
-      // Recargar my feedback
-      const rUser = await fetch("/api/reviews/user", { credentials: "include" });
-      const dUser = await rUser.json();
-      const entry = (dUser.feedback || []).find(
-        (f) => f.video_game?._id === gameId || f.video_game?._id?.toString() === gameId
-      );
-      setMyReview(entry?.review || null);
-      setMyRating(entry?.rating || null);
-    } catch (e) {
-      setModalErr(e.message);
-    } finally {
-      setModalLoad(false);
     }
-  };
+
+    setModalOpen(false);
+
+    fetchFeedback();
+
+    const res = await fetch(`/api/videogames/${gameId}`, {
+      credentials: "include",
+    });
+
+    const d = await res.json();
+
+    if (d.videoGame) setGame(d.videoGame);
+
+    const rUser = await fetch("/api/reviews/user", {
+      credentials: "include",
+    });
+
+    const dUser = await rUser.json();
+
+    const entry = (dUser.feedback || []).find(
+      (f) =>
+        f.video_game?._id === gameId ||
+        f.video_game?._id?.toString() === gameId
+    );
+
+    setMyReview(entry?.review || null);
+    setMyRating(entry?.rating || null);
+
+  } catch (e) {
+    setModalErr(e.message);
+  } finally {
+    setModalLoad(false);
+  }
+};
 
   const handleDeleteReview = async () => {
     if (!myReview) return;
@@ -159,19 +177,33 @@ export default function GameDetail({ game: gameFromList, onNavigate, user, onLog
     }
   };
 
-  const handleDeleteRating = async () => {
-    if (!myRating) return;
-    try {
-      await deleteRating(myRating._id);
-      setMyRating(null);
-      const res = await fetch(`/api/videogames/${gameId}`, { credentials: "include" });
-      const d   = await res.json();
-      if (d.videoGame) setGame(d.videoGame);
-      fetchFeedback();
-    } catch (e) {
-      setGameErr(e.message);
+const handleDeleteRating = async () => {
+  if (!myRating) return;
+
+  try {
+    // borrar review si existe
+    if (myReview) {
+      await deleteReview(myReview._id);
+      setMyReview(null);
     }
-  };
+
+    // borrar rating
+    await deleteRating(myRating._id);
+    setMyRating(null);
+
+    const res = await fetch(`/api/videogames/${gameId}`, {
+      credentials: "include",
+    });
+
+    const d = await res.json();
+
+    if (d.videoGame) setGame(d.videoGame);
+
+    fetchFeedback();
+  } catch (e) {
+    setGameErr(e.message);
+  }
+};
 
   if (!game) {
     return (
@@ -308,7 +340,7 @@ export default function GameDetail({ game: gameFromList, onNavigate, user, onLog
                         onClick={handleDeleteRating}
                         sx={{ borderColor: "#e53935", color: "#e53935", fontSize: "0.78rem" }}
                       >
-                        Borrar calificación
+                        Borrar reseña y calificación.
                       </Button>
                     )}
                   </Box>
